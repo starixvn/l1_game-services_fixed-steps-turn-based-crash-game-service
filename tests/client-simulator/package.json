@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "scripts": {
+    "setup-user": "node --es-module-specifier-resolution=node ./src/runner/setup.js",
+    "start": "nodemon --es-module-specifier-resolution=node --watch ./src ./index.js"
+  },
+  "dependencies": {
+    "axios": "^0.27.2",
+    "socket.io-client": "^4.5.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

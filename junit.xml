@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="5" failures="5" errors="0" time="210.114">
+  <testsuite name="cashOut" errors="0" failures="2" skipped="0" timestamp="2024-03-05T09:19:12" time="146.475" tests="2">
+    <testcase classname="cashOut when cashOut should cash out successful" name="cashOut when cashOut should cash out successful" time="60.011">
+      <failure>Error: thrown: &quot;Exceeded timeout of 60000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at it (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:19:9)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at describe (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:18:5)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at Object.describe (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:5:1)
+    at Runtime._execModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1439:24)
+    at Runtime._loadModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1022:12)
+    at Runtime.requireModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:882:12)
+    at jestAdapter (D:\Lumi\crash-game-service\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="cashOut when autoCashOut should cash out successful" name="cashOut when autoCashOut should cash out successful" time="60.011">
+      <failure>Error: thrown: &quot;Exceeded timeout of 60000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at it (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:45:9)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at describe (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:44:5)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at Object.describe (D:\Lumi\crash-game-service\tests\integration-tests\cashout.test.js:5:1)
+    at Runtime._execModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1439:24)
+    at Runtime._loadModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1022:12)
+    at Runtime.requireModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:882:12)
+    at jestAdapter (D:\Lumi\crash-game-service\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="ProvablyPair" errors="0" failures="2" skipped="0" timestamp="2024-03-05T09:21:39" time="31.563" tests="2">
+    <testcase classname="ProvablyPair when start placeBet should receive pf server seed hash " name="ProvablyPair when start placeBet should receive pf server seed hash " time="0.001">
+      <failure>Error: thrown: &quot;Exceeded timeout of 30000 ms for a hook.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at beforeAll (D:\Lumi\crash-game-service\tests\integration-tests\provably-fair.test.js:12:5)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at Object.describe (D:\Lumi\crash-game-service\tests\integration-tests\provably-fair.test.js:5:1)
+    at Runtime._execModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1439:24)
+    at Runtime._loadModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1022:12)
+    at Runtime.requireModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:882:12)
+    at jestAdapter (D:\Lumi\crash-game-service\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:77:13)
+    at runTestInternal (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="ProvablyPair when finish should receive pf info" name="ProvablyPair when finish should receive pf info" time="0">
+      <failure>Error: thrown: &quot;Exceeded timeout of 30000 ms for a hook.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at beforeAll (D:\Lumi\crash-game-service\tests\integration-tests\provably-fair.test.js:12:5)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at Object.describe (D:\Lumi\crash-game-service\tests\integration-tests\provably-fair.test.js:5:1)
+    at Runtime._execModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1439:24)
+    at Runtime._loadModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1022:12)
+    at Runtime.requireModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:882:12)
+    at jestAdapter (D:\Lumi\crash-game-service\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:77:13)
+    at runTestInternal (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="refund bet" errors="0" failures="1" skipped="0" timestamp="2024-03-05T09:22:10" time="31.648" tests="1">
+    <testcase classname="refund bet should refund all unsettled bets" name="refund bet should refund all unsettled bets" time="0.004">
+      <failure>Error: thrown: &quot;Exceeded timeout of 30000 ms for a hook.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at beforeAll (D:\Lumi\crash-game-service\tests\integration-tests\unsettled-round.test.js:12:5)
+    at _dispatchDescribe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:91:26)
+    at describe (D:\Lumi\crash-game-service\node_modules\jest-circus\build\index.js:55:5)
+    at Object.describe (D:\Lumi\crash-game-service\tests\integration-tests\unsettled-round.test.js:5:1)
+    at Runtime._execModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1439:24)
+    at Runtime._loadModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:1022:12)
+    at Runtime.requireModule (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runtime\build\index.js:882:12)
+    at jestAdapter (D:\Lumi\crash-game-service\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:77:13)
+    at runTestInternal (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Lumi\crash-game-service\node_modules\jest-config\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
