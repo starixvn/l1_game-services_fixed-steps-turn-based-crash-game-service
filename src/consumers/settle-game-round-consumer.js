@@ -81,6 +81,8 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
 
                 this.provablyFairConsumer.generateServerSeedAndPublishHash(player.UID, player.profile.name);
             }
+
+            return winAmount;
         } catch (error) {
             this.logService?.logError(`Failed to settle round ${roundId}: ${error}`);
             throw error;

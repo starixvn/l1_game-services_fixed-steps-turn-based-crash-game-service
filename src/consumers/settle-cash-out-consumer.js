@@ -49,12 +49,17 @@ export class SettleCashOutConsumer {
 
         await this.insertBetLog(player, roundId, { multiplier, roundId, tapCount, amount, isAutoCashOut });
         this.updateGameData(player, { multiplier, roundId, tapCount });
-        await this.settleGameRoundConsumer.settleRound({ roundId, time: new Date(), player, playerName: player.profile.name });
+
+        const winningAmount = await this.settleGameRoundConsumer.settleRound({
+            roundId,
+            time: new Date(),
+            player,
+            playerName: player.profile.name,
+        });
 
         if (isBigWin(multiplier)) {
             const rate = this.calculateCurrencyRate(player.session);
             const baseAmount = amount * rate;
-            const winningAmount = multiplier * amount;
             const baseWinningAmount = winningAmount * rate;
             const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
                 roundId,
