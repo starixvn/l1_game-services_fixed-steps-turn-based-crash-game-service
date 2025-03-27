@@ -1,12 +1,12 @@
-import mongoose from "mongoose";
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import GameData from "../../game-data";
-import PlaceBetPublisher from "../../event-publishers/place-bet-publisher";
-import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
-import { Actions } from "../../constants";
 import Chance from "chance";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
+import mongoose from "mongoose";
+import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
+import { Actions } from "../../constants";
+import { BigWinConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } from "../../consumers";
+import GameData from "../../game-data";
 import helpers from "../../helpers/notice-helper";
-
+import { RecentBigWinPublisher } from "../../event-publishers";
 const chance = new Chance();
 
 jest.mock("../../helpers/date-helper", () => ({
@@ -18,17 +18,42 @@ describe("SettleCashOutConsumer", () => {
     gameData.updatePlayerAction = jest.fn();
     gameData.gameConfigs.crashConfig = {};
     gameData.result = 100;
+    gameData.exchangeRates.exId = 1;
 
-    const placeBetPublisher = stub(PlaceBetPublisher);
+    const publisher = stub(BaseEventPublisher);
+
     const logService = {
         logError: jest.fn(),
     };
     const betLogsRepository = stubMongoose(mongoose.Model);
 
+    /**
+     * @type {BigWinConsumer}
+     */
+    const bigWinConsumer = stub(BigWinConsumer);
+    /**
+     * @type {SettleGameRoundConsumer}
+     */
+    const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
+    /**
+     * @type {RecentBigWinPublisher}
+     */
+    const recentBigWinPublisher = stub(RecentBigWinPublisher);
+    /**
+     * @type {SettleCashOutConsumer}
+     */
     let consumer;
 
     beforeEach(() => {
-        consumer = new SettleCashOutConsumer(gameData, placeBetPublisher, logService, betLogsRepository);
+        consumer = new SettleCashOutConsumer({
+            gameData,
+            settleGameRoundConsumer,
+            publisher,
+            logService,
+            betLogsRepository,
+            bigWinConsumer,
+            recentBigWinPublisher,
+        });
     });
 
     afterEach(() => {
@@ -58,7 +83,15 @@ describe("SettleCashOutConsumer", () => {
 
     describe("insertBetLog", () => {
         const roundId = chance.natural();
-        const payload = { roundId, action: Actions.CashOut, tapCount: 1 };
+        const payload = {
+            roundId,
+            action: Actions.CashOut,
+            tapCount: 1,
+            amount: 1000,
+            multiplier: 1.5,
+            clientSendTime: new Date(),
+            receivedTime: new Date(),
+        };
 
         beforeEach(() => {
             consumer.calculateCurrencyRate = jest.fn();
@@ -69,36 +102,43 @@ describe("SettleCashOutConsumer", () => {
             await consumer.insertBetLog(realPlayer, roundId, payload);
 
             // Assert
-            expect(consumer.calculateCurrencyRate).toBeCalledWith(realPlayer.session);
+            expect(consumer.calculateCurrencyRate).toHaveBeenCalledWith(realPlayer.session);
         });
 
-        it("should call betLogsRepository.create", async () => {
+        it("should call betLogsRepository.create with correct parameters", async () => {
             // Arrange
             const rate = chance.floating({ min: 1 });
             const mockDate = new Date();
             jest.spyOn(global, "Date").mockReturnValueOnce(mockDate);
             consumer.calculateCurrencyRate.mockReturnValueOnce(rate);
 
+            const bet = { ...payload, isAutoCashOut: true };
+            realPlayer.session.operatorId = "operator123";
+
             // Act
-            await consumer.insertBetLog(realPlayer, roundId, payload);
+            await consumer.insertBetLog(realPlayer, roundId, bet);
 
             // Assert
-            expect(betLogsRepository.create).toBeCalledWith({
+            expect(betLogsRepository.create).toHaveBeenCalledWith({
                 uid: realPlayer.UID,
                 name: realPlayer.profile.name,
                 time: mockDate,
-                action: payload.action,
-                amount: payload.amount,
-                clientSendTime: payload.clientSendTime,
-                receivedTime: payload.receivedTime,
+                action: bet.action,
+                amount: bet.amount,
+                clientSendTime: bet.clientSendTime,
+                receivedTime: bet.receivedTime,
                 roundId,
-                multiplier: payload.multiplier,
+                multiplier: bet.multiplier,
                 siteId: realPlayer.session.siteId,
                 currency: realPlayer.session.currencyName,
                 rate,
                 operatorId: realPlayer.session.operatorId,
                 playerId: realPlayer.session.playerId,
-                tapCount: payload.tapCount,
+                tapCount: bet.tapCount,
+                winAmount: bet.amount * bet.multiplier,
+                isAutoCashOut: bet.isAutoCashOut,
+                currencyCode: realPlayer.session.currencyCode,
+                currencyMultiplier: realPlayer.session.multiplier,
             });
         });
     });
@@ -150,7 +190,6 @@ describe("SettleCashOutConsumer", () => {
         it("should return false when player has already cashed out", () => {
             // Arrange
             gameData.ingame[playerName].betTracks = {
-                [Actions.Bet]: { amount: 100 },
                 [Actions.CashOut]: { time: new Date() },
             };
 
@@ -199,7 +238,7 @@ describe("SettleCashOutConsumer", () => {
             };
 
             // Mock baseEventPublisher
-            consumer.baseEventPublisher = {
+            consumer.publisher = {
                 publishToUser: jest.fn(),
             };
 
@@ -217,13 +256,17 @@ describe("SettleCashOutConsumer", () => {
         };
 
         describe("when validation fails", () => {
+            beforeEach(() => {
+                jest.spyOn(consumer.publisher, "publishToUser");
+            });
+
             it("should return null", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
+
                 consumer.validateCashOut.mockReturnValue(false);
 
                 // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
+                const result = await consumer.proceedCashOut(realPlayer);
 
                 // Assert
                 expect(result).toBeNull();
@@ -231,15 +274,15 @@ describe("SettleCashOutConsumer", () => {
 
             it("should publish invalid notice", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
+
                 consumer.validateCashOut.mockReturnValue(false);
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut(realPlayer);
 
                 // Assert
-                expect(consumer.baseEventPublisher.publishToUser).toHaveBeenCalledTimes(1);
-                expect(consumer.baseEventPublisher.publishToUser).toHaveBeenCalledWith(realPlayer.UID, {
+                expect(consumer.publisher.publishToUser).toHaveBeenCalledTimes(1);
+                expect(consumer.publisher.publishToUser).toHaveBeenCalledWith(realPlayer.UID, {
                     endBet: -1,
                     notice: helpers.invalidCashOut,
                 });
@@ -247,14 +290,13 @@ describe("SettleCashOutConsumer", () => {
 
             it("should not proceed with further processing", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
+
                 consumer.validateCashOut.mockReturnValue(false);
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut(realPlayer);
 
                 // Assert
-                expect(consumer.getCashOutBet).not.toHaveBeenCalled();
                 expect(consumer.insertBetLog).not.toHaveBeenCalled();
                 expect(consumer.updateGameData).not.toHaveBeenCalled();
             });
@@ -281,10 +323,9 @@ describe("SettleCashOutConsumer", () => {
 
             it("should return player with bet details", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
 
                 // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
+                const result = await consumer.proceedCashOut(realPlayer);
 
                 // Assert
                 expect(result).toEqual({
@@ -295,22 +336,19 @@ describe("SettleCashOutConsumer", () => {
 
             it("should insert bet log with correct details", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
-
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut(realPlayer);
 
                 // Assert
                 expect(consumer.insertBetLog).toHaveBeenCalledTimes(1);
-                expect(consumer.insertBetLog).toHaveBeenCalledWith(realPlayer, betDetails.roundId, betDetails);
+                expect(consumer.insertBetLog).toHaveBeenCalledWith(realPlayer, betDetails.roundId, { ...betDetails, isAutoCashOut: false });
             });
 
             it("should update game data", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut(realPlayer);
 
                 // Assert
                 expect(consumer.updateGameData).toHaveBeenCalledTimes(1);
@@ -320,17 +358,59 @@ describe("SettleCashOutConsumer", () => {
                     tapCount: betDetails.tapCount,
                 });
             });
+            //it has big win
+            describe("and has big win", () => {
+                it("should publish recent big win with correct params", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    consumer.recentBigWinPublisher.publish = jest.fn();
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
+
+                    const recentBigWinningWinner = {
+                        name: realPlayer.profile.name,
+                        amount: betDetails.amount,
+                        baseAmount: 200,
+                        winningAmount: 200,
+                        baseWinningAmount: 200,
+                        multiplier: betDetails.multiplier,
+                        rate: 1.0,
+                        time: new Date(),
+                        exchangeRateId: gameData.exchangeRates.exId,
+                    };
+                    consumer.bigWinConsumer.add = jest.fn().mockReturnValue(recentBigWinningWinner);
+
+                    // Act
+                    await consumer.proceedCashOut(realPlayer);
+
+                    // Assert
+                    expect(consumer.recentBigWinPublisher.publish).toHaveBeenCalledTimes(1);
+                    expect(consumer.recentBigWinPublisher.publish).toHaveBeenCalledWith(recentBigWinningWinner);
+                });
+            });
+
+            describe("and not has big win", () => {
+                it("should not publish recent big win", async () => {
+                    // Arrange
+                    consumer.recentBigWinPublisher.publish = jest.fn();
+
+                    // Act
+                    await consumer.proceedCashOut(realPlayer);
+
+                    // Assert
+                    expect(consumer.recentBigWinPublisher.publish).not.toHaveBeenCalled();
+                });
+            });
         });
 
         describe("when getCashOutBet returns null", () => {
             it("should return null without further processing", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
                 consumer.validateCashOut.mockReturnValue(true);
                 consumer.getCashOutBet.mockReturnValue(null);
 
                 // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
+                const result = await consumer.proceedCashOut(realPlayer);
 
                 // Assert
                 expect(result).toBeNull();
@@ -365,47 +445,16 @@ describe("SettleCashOutConsumer", () => {
                 tapCount: 1,
                 amount: 100,
             };
-            gameData.ingame[playerName].betTracks = {
-                [Actions.Bet]: expectedBet,
-            };
 
+            gameData.ingame[playerName].activeBet = {
+                ...expectedBet,
+                currentMultiplier: expectedBet.multiplier,
+            };
             // Act
             const result = consumer.getCashOutBet(realPlayer);
 
             // Assert
             expect(result).toEqual(expectedBet);
-        });
-    });
-
-    describe("publishCashOut", () => {
-        beforeEach(() => {
-            consumer.placeBetPublisher = {
-                publishSuccessCashOut: jest.fn(),
-            };
-            consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
-        });
-
-        it("should publish cash out details correctly", async () => {
-            // Arrange
-            const payload = { action: Actions.CashOut };
-            const winningDetails = {
-                multiplier: 1.5,
-                amount: 100,
-            };
-
-            // Act
-            await consumer.publishCashOut(realPlayer, payload, winningDetails);
-
-            // Assert
-            expect(consumer.placeBetPublisher.publishSuccessCashOut).toHaveBeenCalledWith(
-                realPlayer.UID,
-                {
-                    name: realPlayer.profile.name,
-                    playerId: realPlayer.UID,
-                    [payload.action]: winningDetails,
-                },
-                1.0
-            );
         });
     });
 });

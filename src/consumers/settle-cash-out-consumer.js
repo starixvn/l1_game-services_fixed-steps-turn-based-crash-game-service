@@ -5,6 +5,7 @@ import { isBigWin } from "../helpers/result-helper";
 import BigWinConsumer from "./big-win-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
 import { RecentBigWinPublisher } from "../event-publishers";
+import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 
 export class SettleCashOutConsumer {
     /**
