@@ -21,7 +21,7 @@ function findStage(multiplier, stages) {
 }
 
 function calculateIncrement(currentMultiplier, multiplierConfigs) {
-    const stage = multiplierConfigs.stages.find(
+    const stage = multiplierConfigs.stages?.find(
         (stage) => currentMultiplier >= stage.minMultiplier && currentMultiplier < stage.maxMultiplier
     );
 
@@ -36,4 +36,5 @@ function generateTapResult(result) {
     return result > 1.0;
 }
 
-export { calculateMultiplier, calculateCrashTimeInMillisecond, getInitialTapMultiplier, generateTapResult, calculateIncrement, findStage };
+export { calculateCrashTimeInMillisecond, calculateIncrement, calculateMultiplier, findStage, generateTapResult, getInitialTapMultiplier };
+
