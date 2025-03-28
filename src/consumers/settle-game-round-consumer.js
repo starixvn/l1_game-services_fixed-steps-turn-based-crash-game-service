@@ -44,7 +44,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
         try {
             const round = await this.queryRound(roundId);
             const result = await this.resultsRepository.findOne({ roundId }).lean().exec();
-            const crashPoint = decrypt(result.encryptedFinalResult);
+            const crashPoint = decrypt(result?.encryptedFinalResult);
             const betLogs = await this.queryBetLogs(roundId);
             const cashOutLog = betLogs.find((log) => log.action === Actions.CashOut);
 
@@ -96,22 +96,6 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
             playerGameData.betTracks = {};
             playerGameData.activeBet = undefined;
         }
-    }
-
-    getMineResults(betLogs = []) {
-        const result = [];
-        const settlementResult = [];
-        let tapCount = 0;
-
-        betLogs
-            .filter((betLog) => betLog.action === Actions.Mine)
-            .forEach((betLog) => {
-                result.push(betLog.result);
-                settlementResult.push(betLog.result);
-                tapCount += 1;
-            });
-
-        return { result, settlementResult, tapCount };
     }
 
     getMultiplier(cashOutLog) {

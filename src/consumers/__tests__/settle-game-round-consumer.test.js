@@ -4,9 +4,14 @@ import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import { RoundResultPublisher, UserBetResultPublisher } from "sc-game-base/src/core/event-publishers";
 import GameDefinition from "sc-game-base/src/core/game-definition";
-import CrashGameData from "../../game-data";
-import { SettleGameRoundConsumer } from "../settle-game-round-consumer";
 import { Actions } from "../../constants";
+import { ProvablyFairConsumer, SettleGameRoundConsumer } from "../../consumers";
+import CrashGameData from "../../game-data";
+import { decrypt } from "../../helpers/crypto-helper";
+
+jest.mock("../../helpers/crypto-helper", () => ({
+    decrypt: jest.fn(),
+}));
 
 describe("SettleGameRoundConsumer", () => {
     const chance = new Chance();
@@ -16,7 +21,12 @@ describe("SettleGameRoundConsumer", () => {
     const defaultGameData = new CrashGameData(30);
     defaultGameData.gameConfigs = Models.GameConfig({});
 
-    let gameData, definition, consumer;
+    /** @type {CrashGameData}*/
+    let gameData;
+    /** @type {GameDefinition}*/
+    let definition;
+    /** @type {SettleGameRoundConsumer}*/
+    let consumer;
 
     /** @type {UserRoundResultPublisher}*/
     const roundResultPublisher = stub(RoundResultPublisher);
@@ -34,13 +44,17 @@ describe("SettleGameRoundConsumer", () => {
     const betLogsRepository = stubMongoose(mongoose.Model);
     betLogsRepository.insertMany = jest.fn();
 
-    /** @type {mongoose.Model}*/
-    const tempBetsRepository = stubMongoose(mongoose.Model);
-
-    /** @type {mongoose.Model}*/
-    const tempBetLogsRepository = stubMongoose(mongoose.Model);
-
     const endGame = jest.fn();
+
+    const logService = {
+        logError: jest.fn(),
+    };
+
+    /** @type {ProvablyFairConsumer}*/
+    const provablyFairConsumer = stub(ProvablyFairConsumer);
+
+    /** @type {mongoose.Model}*/
+    const resultsRepository = stubMongoose(mongoose.Model);
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -56,134 +70,21 @@ describe("SettleGameRoundConsumer", () => {
             roundsRepository,
             betsRepository,
             betLogsRepository,
-            tempBetsRepository,
-            tempBetLogsRepository,
-        });
-    });
-
-    describe("calculateWinAmount", () => {
-        describe("when bet logs is empty", () => {
-            it("should return 0", () => {
-                // Arrange
-                const emptyBetLogs = [];
-
-                // Act
-                const result = consumer.calculateWinAmount(emptyBetLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
-
-            it("should return 0 when bet logs is null", () => {
-                // Arrange
-                const nullBetLogs = null;
-
-                // Act
-                const result = consumer.calculateWinAmount(nullBetLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
-
-            it("should return 0 when bet logs is undefined", () => {
-                // Arrange
-                const undefinedBetLogs = undefined;
-
-                // Act
-                const result = consumer.calculateWinAmount(undefinedBetLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
-        });
-
-        describe("when bet logs contain cashout action", () => {
-            it("should calculate win amount correctly", () => {
-                // Arrange
-                const amount = chance.natural();
-                const multiplier = chance.floating({ min: 1, max: 2 });
-                const betLogs = [
-                    {
-                        action: Actions.CashOut,
-                        amount,
-                        multiplier,
-                    },
-                ];
-
-                // Act
-                const result = consumer.calculateWinAmount(betLogs);
-
-                // Assert
-                expect(result).toBe(amount * multiplier);
-            });
-
-            it("should handle zero amount", () => {
-                // Arrange
-                const betLogs = [
-                    {
-                        action: Actions.CashOut,
-                        amount: 0,
-                        multiplier: 1.5,
-                    },
-                ];
-
-                // Act
-                const result = consumer.calculateWinAmount(betLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
-        });
-
-        describe("when bet logs don't contain cashout action", () => {
-            it("should return 0 when no cashout action exists", () => {
-                // Arrange
-                const betLogs = [
-                    {
-                        action: Actions.Mine,
-                        amount: 100,
-                        multiplier: 1.5,
-                    },
-                ];
-
-                // Act
-                const result = consumer.calculateWinAmount(betLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
-
-            it("should return 0 for mixed actions without cashout", () => {
-                // Arrange
-                const betLogs = [
-                    { action: Actions.Mine, amount: 100 },
-                    { action: Actions.Bet, amount: 200 },
-                ];
-
-                // Act
-                const result = consumer.calculateWinAmount(betLogs);
-
-                // Assert
-                expect(result).toBe(0);
-            });
+            logService,
+            provablyFairConsumer,
+            resultsRepository,
         });
     });
 
     describe("calculateBetResult", () => {
-        beforeEach(() => {
-            consumer.calculateWinAmount = jest.fn();
-        });
-
         describe("when calculating total bet amount", () => {
             it("should return bet amount with 2 decimal places", () => {
                 // Arrange
                 const betAmount = chance.floating({ min: 1, max: 1000 });
                 const winAmount = chance.floating({ min: 1, max: 1000 });
-                const bet = { amount: betAmount };
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const { totalBetAmount } = consumer.calculateBetResult(bet, []);
+                const { totalBetAmount } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(totalBetAmount).toBe(+betAmount.toFixed(2));
@@ -195,10 +96,9 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 100;
                 const winAmount = 150;
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const { netWin } = consumer.calculateBetResult({ amount: betAmount }, []);
+                const { netWin } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(netWin).toBe(+(winAmount - betAmount).toFixed(2));
@@ -208,10 +108,9 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 100;
                 const winAmount = 150;
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const { totalLost } = consumer.calculateBetResult({ amount: betAmount }, []);
+                const { totalLost } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(totalLost).toBe(0);
@@ -223,10 +122,9 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 150;
                 const winAmount = 100;
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const { netWin } = consumer.calculateBetResult({ amount: betAmount }, []);
+                const { netWin } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(netWin).toBe(0);
@@ -236,10 +134,9 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 150;
                 const winAmount = 100;
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const { totalLost } = consumer.calculateBetResult({ amount: betAmount }, []);
+                const { totalLost } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(totalLost).toBe(+(betAmount - winAmount).toFixed(2));
@@ -249,11 +146,11 @@ describe("SettleGameRoundConsumer", () => {
         describe("when win amount equals bet amount", () => {
             it("should set both netWin and totalLost to 0", () => {
                 // Arrange
-                const amount = chance.natural();
-                consumer.calculateWinAmount.mockReturnValue(amount);
+                const betAmount = chance.natural();
+                const winAmount = betAmount;
 
                 // Act
-                const result = consumer.calculateBetResult({ amount }, []);
+                const result = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(result.netWin).toBe(0);
@@ -266,10 +163,9 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 100.123;
                 const winAmount = 150.456;
-                consumer.calculateWinAmount.mockReturnValue(winAmount);
 
                 // Act
-                const result = consumer.calculateBetResult({ amount: betAmount }, []);
+                const result = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
                 expect(result.totalBetAmount).toBe(+betAmount.toFixed(2));
@@ -281,7 +177,6 @@ describe("SettleGameRoundConsumer", () => {
     });
 
     describe("settleRound", () => {
-        const roundId = chance.natural();
         const time = new Date();
 
         beforeEach(() => {
@@ -290,10 +185,18 @@ describe("SettleGameRoundConsumer", () => {
 
             // Setup mocks for methods
             consumer.queryRound = jest.fn();
+            consumer.resultsRepository = {
+                findOne: () => {
+                    return {
+                        lean: () => {
+                            return {
+                                exec: jest.fn(),
+                            };
+                        },
+                    };
+                },
+            };
             consumer.queryBetLogs = jest.fn();
-            consumer.calculateBetResult = jest.fn();
-            consumer.getMineResults = jest.fn();
-            consumer.updatePlayerBetTracks = jest.fn();
 
             // Setup logService mock if it doesn't exist
             consumer.logService = {
@@ -319,7 +222,7 @@ describe("SettleGameRoundConsumer", () => {
             it("should log error when bet logs are not found", async () => {
                 // Arrange
                 consumer.queryRound.mockResolvedValue({ id: roundId });
-                consumer.queryBetLogs.mockResolvedValue(null);
+                consumer.queryBetLogs.mockResolvedValue([]);
 
                 // Act
                 await consumer.settleRound({ roundId, time });
@@ -333,30 +236,65 @@ describe("SettleGameRoundConsumer", () => {
             it("should return early without processing when data is invalid", async () => {
                 // Arrange
                 consumer.queryRound.mockResolvedValue(null);
-                consumer.queryBetLogs.mockResolvedValue(null);
+                consumer.queryBetLogs.mockResolvedValue([]);
+                jest.spyOn(consumer, "calculateBetResult");
 
                 // Act
                 await consumer.settleRound({ roundId, time });
 
                 // Assert
                 expect(consumer.calculateBetResult).not.toHaveBeenCalled();
-                expect(consumer.getMineResults).not.toHaveBeenCalled();
-                expect(consumer.updatePlayerBetTracks).not.toHaveBeenCalled();
             });
         });
 
         describe("when round data is valid", () => {
+            const player = {
+                UID: chance.guid(),
+                profile: {
+                    name: chance.word(),
+                },
+            };
             const mockRound = {
                 id: roundId,
+                tapCount: 2,
+                result: 2.5,
+                betAmount: 100,
+                amount: 100,
+                totalAmount: 100,
+                maxWin: 1000,
+                betWin: 102,
                 uid: chance.guid(),
-                name: chance.word(),
+                name: player.profile.name,
                 save: jest.fn(),
             };
 
             const mockBetLogs = [
                 {
-                    action: "Mine",
+                    action: Actions.Bet,
                     result: chance.natural(),
+                    multiplier: 1.01,
+                    amount: 100,
+                    winAmount: 101,
+                    increment: 0,
+                    reachMaxWin: false,
+                },
+                {
+                    action: Actions.Mine,
+                    result: chance.natural(),
+                    multiplier: 1.02,
+                    amount: 100,
+                    winAmount: 102,
+                    increment: 0.01,
+                    reachMaxWin: false,
+                },
+                {
+                    action: Actions.CashOut,
+                    result: chance.natural(),
+                    multiplier: 1.02,
+                    amount: 100,
+                    winAmount: 102,
+                    increment: 0,
+                    reachMaxWin: false,
                 },
             ];
 
@@ -364,24 +302,36 @@ describe("SettleGameRoundConsumer", () => {
                 // Setup mocks for valid round scenario
                 consumer.queryRound.mockResolvedValue(mockRound);
                 consumer.queryBetLogs.mockResolvedValue(mockBetLogs);
-                consumer.calculateBetResult.mockReturnValue({
-                    totalWin: chance.natural(),
-                });
-                consumer.getMineResults.mockReturnValue({
-                    result: [1, 2, 3],
-                    settlementResult: [1, 2, 3],
-                    tapCount: 3,
-                });
+
+                consumer.resultsRepository = {
+                    findOne: () => {
+                        return {
+                            lean: () => {
+                                return {
+                                    exec: jest.fn().mockReturnValue({
+                                        roundId: roundId,
+                                    }),
+                                };
+                            },
+                        };
+                    },
+                };
+
                 consumer.callEndGame = jest.fn();
                 consumer.userBetResultPublisher = {
                     publish: jest.fn(),
+                };
+
+                decrypt.mockReturnValue("2.5");
+                consumer.provablyFairConsumer = {
+                    generateServerSeedAndPublishHash: jest.fn(),
                 };
             });
 
             it("should update round with bet result", async () => {
                 // Arrange
                 const betResult = { totalWin: chance.natural() };
-                consumer.calculateBetResult.mockReturnValue(betResult);
+                consumer.calculateBetResult = jest.fn().mockReturnValue(betResult);
 
                 // Act
                 await consumer.settleRound({ roundId, time });
@@ -389,24 +339,18 @@ describe("SettleGameRoundConsumer", () => {
                 // Assert
                 expect(mockRound.betwin).toBe(betResult.totalWin);
                 expect(mockRound.paid).toBe(true);
+                expect(mockRound.reachMaxWin).toBe(false);
             });
 
             it("should update round with mine results", async () => {
                 // Arrange
-                const mineResults = {
-                    result: [1, 2],
-                    settlementResult: [1, 2],
-                    tapCount: 2,
-                };
-                consumer.getMineResults.mockReturnValue(mineResults);
 
                 // Act
                 await consumer.settleRound({ roundId, time });
 
                 // Assert
-                expect(mockRound.result).toEqual(mineResults.result);
-                expect(mockRound.settlementResult).toEqual(mineResults.settlementResult);
-                expect(mockRound.tapCount).toBe(mineResults.tapCount);
+                expect(mockRound.result).toEqual(2.5);
+                expect(mockRound.tapCount).toBe(2);
             });
 
             it("should save round after updates", async () => {
@@ -422,8 +366,12 @@ describe("SettleGameRoundConsumer", () => {
 
             it("should call endGame with correct parameters", async () => {
                 // Arrange
-                const betResult = { totalWin: chance.natural() };
-                consumer.calculateBetResult.mockReturnValue(betResult);
+                const betResult = {
+                    totalBetAmount: 100,
+                    totalWin: 102,
+                    netWin: 2,
+                    totalLost: 0,
+                };
 
                 // Act
                 await consumer.settleRound({ roundId, time });
@@ -432,18 +380,98 @@ describe("SettleGameRoundConsumer", () => {
                 expect(consumer.callEndGame).toHaveBeenCalledWith(mockRound, roundId, time, betResult);
             });
 
-            it("should publish bet result to user", async () => {
-                // Arrange
-                const betResult = { totalWin: chance.natural() };
-                consumer.calculateBetResult.mockReturnValue(betResult);
+            describe("and player is provided", () => {
+                const betResult = {
+                    totalBetAmount: 100,
+                    totalWin: 102,
+                    netWin: 2,
+                    totalLost: 0,
+                };
 
-                // Act
-                await consumer.settleRound({ roundId, time });
+                beforeEach(() => {
+                    consumer.gameData = {
+                        ingame: {
+                            [player.profile.name]: {
+                                betTracks: {},
+                            },
+                        },
+                        provablyFair: {
+                            [player.profile.name]: {
+                                serverSeed: chance.string(),
+                                serverSeedHash: chance.string(),
+                            },
+                        },
+                    };
+                    consumer.calculateBetResult = jest.fn().mockReturnValue(betResult);
+                });
 
-                // Assert
-                expect(consumer.userBetResultPublisher.publish).toHaveBeenCalledWith(mockRound.uid, {
-                    ...betResult,
-                    reachMaxWin: false,
+                it("should publish bet result to user", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time, player, playerName: player.profile.name });
+
+                    // Assert
+                    expect(consumer.userBetResultPublisher.publish).toHaveBeenCalledWith(player.UID, {
+                        ...betResult,
+                        reachMaxWin: false,
+                    });
+                });
+
+                it("should updatePlayerBetTracks", async () => {
+                    // Arrange
+                    consumer.updatePlayerBetTracks = jest.fn();
+
+                    // Act
+                    await consumer.settleRound({ roundId, time, player, playerName: player.profile.name });
+
+                    // Assert
+                    expect(consumer.updatePlayerBetTracks).toHaveBeenCalledWith(player.profile.name);
+                });
+
+                it("should generateServerSeedAndPublishHash", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time, player, playerName: player.profile.name });
+
+                    // Assert
+                    expect(consumer.provablyFairConsumer.generateServerSeedAndPublishHash).toHaveBeenCalledWith(
+                        player.UID,
+                        player.profile.name
+                    );
+                });
+            });
+
+            describe("and player is not provided", () => {
+                beforeEach(() => {
+                    consumer.userBetResultPublisher = {
+                        publish: jest.fn(),
+                    };
+                    consumer.updatePlayerBetTracks = jest.fn();
+                    consumer.provablyFairConsumer = {
+                        generateServerSeedAndPublishHash: jest.fn(),
+                    };
+                });
+
+                it("should not publish bet result to user", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time });
+
+                    // Assert
+                    expect(consumer.userBetResultPublisher.publish).not.toHaveBeenCalled();
+                });
+
+                it("should not updatePlayerBetTracks", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time });
+
+                    // Assert
+                    expect(consumer.updatePlayerBetTracks).not.toHaveBeenCalled();
+                });
+
+                it("should not generateServerSeedAndPublishHash", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time });
+
+                    // Assert
+                    expect(consumer.provablyFairConsumer.generateServerSeedAndPublishHash).not.toHaveBeenCalled();
                 });
             });
         });
@@ -458,7 +486,7 @@ describe("SettleGameRoundConsumer", () => {
                 await expect(consumer.settleRound({ roundId, time })).rejects.toThrow(error);
 
                 // Assert
-                expect(consumer.logService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to settle round"), error);
+                expect(consumer.logService.logError).toHaveBeenCalledWith(expect.stringContaining("Failed to settle round"));
             });
         });
     });
@@ -467,47 +495,36 @@ describe("SettleGameRoundConsumer", () => {
         it("should query round by id", async () => {
             // Arrange
             const roundId = chance.natural();
-            const expectedRound = [{ id: roundId }];
-            roundsRepository.find().exec.mockResolvedValue(expectedRound);
+            const expectedRound = { id: roundId };
+            roundsRepository.findOne().exec.mockResolvedValue(expectedRound);
 
             // Act
             const result = await consumer.queryRound(roundId);
 
             // Assert
-            expect(roundsRepository.find).toHaveBeenCalledWith({ id: roundId });
+            expect(roundsRepository.findOne).toHaveBeenCalledWith({ id: roundId });
             expect(result).toEqual(expectedRound);
         });
     });
 
     describe("queryBetLogs", () => {
-        it("should combine real player and bot bet logs", async () => {
+        it("should query with correct roundId", async () => {
             // Arrange
             const roundId = chance.natural();
-            const realPlayerLogs = [{ id: 1, type: "real" }];
-            const botLogs = [{ id: 2, type: "bot" }];
-
-            betLogsRepository.find().lean().exec.mockResolvedValue(realPlayerLogs);
-            tempBetLogsRepository.find().lean().exec.mockResolvedValue(botLogs);
+            const expectedBetLogs = [
+                {
+                    id: chance.natural(),
+                    roundId: roundId,
+                },
+            ];
+            betLogsRepository.find().lean().exec.mockResolvedValue(expectedBetLogs);
 
             // Act
             const result = await consumer.queryBetLogs(roundId);
 
             // Assert
-            expect(result).toEqual([...realPlayerLogs, ...botLogs]);
-        });
-
-        it("should query both repositories with correct roundId", async () => {
-            // Arrange
-            const roundId = chance.natural();
-            betLogsRepository.find().lean().exec.mockResolvedValue([]);
-            tempBetLogsRepository.find().lean().exec.mockResolvedValue([]);
-
-            // Act
-            await consumer.queryBetLogs(roundId);
-
-            // Assert
             expect(betLogsRepository.find).toHaveBeenCalledWith({ roundId });
-            expect(tempBetLogsRepository.find).toHaveBeenCalledWith({ roundId });
+            expect(result).toEqual(expectedBetLogs);
         });
     });
 
@@ -544,123 +561,6 @@ describe("SettleGameRoundConsumer", () => {
             expect(() => {
                 consumer.updatePlayerBetTracks(playerName);
             }).not.toThrow();
-        });
-    });
-
-    describe("getMineResults", () => {
-        it("should extract mine results from bet logs", () => {
-            // Arrange
-            const betLogs = [
-                { action: Actions.Mine, result: 1 },
-                { action: Actions.Mine, result: 2 },
-                { action: Actions.CashOut, result: 3 },
-            ];
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result).toEqual([1, 2]);
-            expect(settlementResult).toEqual([1, 2]);
-            expect(tapCount).toBe(2);
-        });
-
-        it("should handle empty bet logs", () => {
-            // Arrange
-            const emptyBetLogs = [];
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(emptyBetLogs);
-
-            // Assert
-            expect(result).toEqual([]);
-            expect(settlementResult).toEqual([]);
-            expect(tapCount).toBe(0);
-        });
-
-        it("should handle bet logs without mine actions", () => {
-            // Arrange
-            const betLogs = [
-                { action: Actions.CashOut, result: 1 },
-                { action: Actions.Bet, result: 2 },
-            ];
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result).toEqual([]);
-            expect(settlementResult).toEqual([]);
-            expect(tapCount).toBe(0);
-        });
-
-        it("should count only mine actions", () => {
-            // Arrange
-            const betLogs = [
-                { action: Actions.Mine, result: 1 },
-                { action: Actions.Bet, result: 2 },
-                { action: Actions.Mine, result: 3 },
-                { action: Actions.CashOut, result: 4 },
-            ];
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result).toEqual([1, 3]);
-            expect(settlementResult).toEqual([1, 3]);
-            expect(tapCount).toBe(2);
-        });
-
-        it("should handle null or undefined results", () => {
-            // Arrange
-            const betLogs = [
-                { action: Actions.Mine, result: null },
-                { action: Actions.Mine, result: undefined },
-                { action: Actions.Mine, result: 3 },
-            ];
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result).toEqual([null, undefined, 3]);
-            expect(settlementResult).toEqual([null, undefined, 3]);
-            expect(tapCount).toBe(3);
-        });
-
-        it("should handle random mine results", () => {
-            // Arrange
-            const mineResults = [chance.natural(), chance.natural(), chance.natural()];
-            const betLogs = mineResults.map((result) => ({
-                action: Actions.Mine,
-                result,
-            }));
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result).toEqual(mineResults);
-            expect(settlementResult).toEqual(mineResults);
-            expect(tapCount).toBe(mineResults.length);
-        });
-
-        it("should handle large number of bet logs", () => {
-            // Arrange
-            const numberOfLogs = 100;
-            const betLogs = Array.from({ length: numberOfLogs }, () => ({
-                action: Actions.Mine,
-                result: chance.natural(),
-            }));
-
-            // Act
-            const { result, settlementResult, tapCount } = consumer.getMineResults(betLogs);
-
-            // Assert
-            expect(result.length).toBe(numberOfLogs);
-            expect(settlementResult.length).toBe(numberOfLogs);
-            expect(tapCount).toBe(numberOfLogs);
         });
     });
 });
