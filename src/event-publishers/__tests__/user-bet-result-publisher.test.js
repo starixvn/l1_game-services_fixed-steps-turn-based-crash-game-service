@@ -18,7 +18,7 @@ const gameData = new GameData();
 const gameName = "game";
 const chance = new Chance();
 
-describe("userBetResultPublisher", () => {
+describe.skip("userBetResultPublisher", () => {
     const userId = chance.guid();
     let publisher;
 

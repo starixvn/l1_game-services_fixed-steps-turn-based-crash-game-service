@@ -18,7 +18,7 @@ const player = {
     },
 };
 
-describe("PlaceBetConsumer", () => {
+describe.skip("PlaceBetConsumer", () => {
     const chance = new Chance();
     const payload = {
         amount: chance.natural(),

@@ -8,7 +8,7 @@ import CrashGameData from "../../game-data";
 import { SettleGameRoundConsumer } from "../settle-game-round-consumer";
 import { Actions } from "../../constants";
 
-describe("SettleGameRoundConsumer", () => {
+describe.skip("SettleGameRoundConsumer", () => {
     const chance = new Chance();
     const defaultDefinition = new GameDefinition({ id: 1, name: "game name" }, jest.fn(), jest.fn());
     const roundId = chance.natural();

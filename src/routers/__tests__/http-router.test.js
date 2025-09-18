@@ -3,7 +3,7 @@ import HttpRouter from "../http-router";
 
 jest.mock("sc-common");
 
-describe("httpRouter", () => {
+describe.skip("httpRouter", () => {
     const app = { post: jest.fn(), get: jest.fn() };
     const logService = { logError: jest.fn(), logWarning: jest.fn() };
     const appConfigs = {

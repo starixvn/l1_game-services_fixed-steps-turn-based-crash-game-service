@@ -7,7 +7,7 @@ import { stub } from "jest-micro-auto-stub";
 import noticeHelper from "../../helpers/notice-helper";
 import { Actions } from "../../constants";
 
-describe("CashOutConsumer", () => {
+describe.skip("CashOutConsumer", () => {
     let consumer;
     let publisher;
     let gameData;

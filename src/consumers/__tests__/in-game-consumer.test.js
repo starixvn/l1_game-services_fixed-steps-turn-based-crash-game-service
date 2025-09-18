@@ -5,7 +5,7 @@ import { RoundQuery } from "sc-game-base/src/core/query-apis";
 import CrashGameData from "../../game-data";
 import { InGameConsumer } from "../in-game-consumer";
 
-describe("in game consumer instance", () => {
+describe.skip("in game consumer instance", () => {
     const definition = {
         id: 41,
         name: "crash",

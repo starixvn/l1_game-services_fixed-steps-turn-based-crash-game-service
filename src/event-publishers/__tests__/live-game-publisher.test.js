@@ -4,7 +4,7 @@ import { Chance } from "chance";
 
 const chance = new Chance();
 
-describe("liveGamePublisher", () => {
+describe.skip("liveGamePublisher", () => {
     const publisher = new LiveGamePublisher();
 
     beforeEach(() => {

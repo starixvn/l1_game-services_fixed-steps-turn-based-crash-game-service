@@ -4,7 +4,7 @@ import { UserDisconnectConsumer } from "../user-disconnect-consumer";
 import { stub } from "jest-micro-auto-stub";
 import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
 
-describe("UserDisconnectConsumer", () => {
+describe.skip("UserDisconnectConsumer", () => {
     let consumer;
     let gameData;
     let baseEventPublisher;

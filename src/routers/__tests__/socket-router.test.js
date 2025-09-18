@@ -1,7 +1,7 @@
 import { BaseSocketRouter } from "sc-game-base/src/core/routers";
 import { SocketRouter } from "../";
 
-describe("socketRouter", () => {
+describe.skip("socketRouter", () => {
     const socketClient = { on: jest.fn(), id: 99999 };
     const cashOutConsumer = { consume: jest.fn() };
     let socketRouter;

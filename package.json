@@ -24,8 +24,8 @@
     "dependencies": {
         "chance": "^1.1.7",
         "lodash": "^4.17.19",
-        "sc-game-base": "4.2.0",
-        "sc-instrument": "1.1.0"
+        "sc-instrument": "1.1.0",
+        "sc-game-base": "4.2.0"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.12.11",
@@ -47,6 +47,10 @@
     "resolutions": {
         "sc-game-base": "4.2.0",
         "sc-base-database": "1.11.3",
-        "sc-base-apis": "1.18.2"
+        "sc-base-apis": "1.18.2",
+        "mongoose": "6.13.6",
+        "form-data": "4.0.4",
+        "sc-common": "2.0.0",
+        "socket.io-parser": "4.0.5"
     }
 }

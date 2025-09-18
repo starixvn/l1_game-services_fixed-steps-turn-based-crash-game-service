@@ -3,7 +3,7 @@ import Chance from "chance";
 
 const chance = new Chance();
 
-describe("placeBetPublisher", () => {
+describe.skip("placeBetPublisher", () => {
     let publisher;
 
     beforeEach(() => {

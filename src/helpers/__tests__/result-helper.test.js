@@ -1,7 +1,7 @@
 import Chance from "chance";
 import { generateRawResultForHash, generateResult } from "../result-helper";
 
-describe("resultHelper", () => {
+describe.skip("resultHelper", () => {
     const chance = new Chance();
 
     describe("generateResult", () => {

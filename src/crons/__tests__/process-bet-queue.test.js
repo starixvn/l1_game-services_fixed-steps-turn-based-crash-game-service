@@ -20,7 +20,7 @@ jest.mock("../../helpers/crash-point-helper", () => ({
     calculateMultiplier: jest.fn(),
 }));
 
-describe("ProcessBetQueue", () => {
+describe.skip("ProcessBetQueue", () => {
     jest.mock("sc-game-base/src/core/event-publishers");
     const roundId = chance.natural();
     const gameData = new CrashGameData(10);

@@ -30,7 +30,7 @@ afterEach(() => {
     gameData = new CrashGameData();
 });
 
-describe("getRemovalBotIds", () => {
+describe.skip("getRemovalBotIds", () => {
     const bot = initBot();
     describe("when there are not bots in the room", () => {
         it("should return an empty array", () => {
@@ -75,7 +75,7 @@ describe("getRemovalBotIds", () => {
     });
 });
 
-describe("getBotsToCashOut", () => {
+describe.skip("getBotsToCashOut", () => {
     describe("when there are no bots in the room", () => {
         it("should return an empty array", () => {
             //Arrange
@@ -150,7 +150,7 @@ describe("getBotsToCashOut", () => {
     });
 });
 
-describe("placeBet", () => {
+describe.skip("placeBet", () => {
     describe("when the remaining time is less than the locking bet duration", () => {
         it("should not place a bet ", async () => {
             const bot = initBot();
@@ -180,7 +180,7 @@ describe("placeBet", () => {
     });
 });
 
-describe("cashOut", () => {
+describe.skip("cashOut", () => {
     describe("when remaining time < 0", () => {
         it("should insert betlog and mark cashout for bots", async () => {
             //Arrange

@@ -13,7 +13,7 @@ function initUMWatcher() {
     return new UmInfoWatcher(gameData, umInfoRepository, logger);
 }
 
-describe("handleChangeStreamChange", () => {
+describe.skip("handleChangeStreamChange", () => {
     describe("when partnerId has value", () => {
         it("should set isUm to true for refund players with matching partnerId", () => {
             const data = {

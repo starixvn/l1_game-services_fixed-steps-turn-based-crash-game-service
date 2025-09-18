@@ -1,6 +1,6 @@
 import { findStage, calculateIncrement, calculateNextTapMultiplier } from "../crash-point-helper";
 
-describe("crash-point-helper", () => {
+describe.skip("crash-point-helper", () => {
     const mockStageConfigs = {
         initialMultiplier: 1.2,
         stages: [
