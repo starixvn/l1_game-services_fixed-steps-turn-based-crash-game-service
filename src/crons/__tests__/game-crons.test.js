@@ -10,7 +10,6 @@ import gameSettings from "../../game-settings";
 import UmInfoWatcher from "../../watchers/um-info-watcher";
 import Bot from "../bot";
 import GameCrons from "../game-crons";
-import LiveGameCrons from "../live-game-cron";
 import { BaseGameCron } from "sc-game-base/src/core/crons";
 
 jest.mock("sc-game-base/src/core/event-publishers");
@@ -31,7 +30,6 @@ const bot = new Bot(gameData, definition, null, userInfosRepository);
 const settleGameRoundConsumer = new SettleGameRoundConsumer({});
 const runningRoundInfoPublisher = new RunningRoundInfoPublisher();
 const gameStatusPublisher = new GameStatusPublisher();
-const liveGameCrons = new LiveGameCrons({});
 const umInfoWatcher = new UmInfoWatcher(gameData);
 const unsettledRoundConsumer = stub(UnsettledRoundConsumer);
 const provablyFairConsumer = stub(ProvablyFairConsumer);
@@ -95,7 +93,6 @@ const createBaseGameCron = function () {
         currencyGroupRepository,
         currencyRepository,
         roundResultConsumer,
-        liveGameCrons,
         betsRepository,
         betLogsRepository,
         resultsRepository: {},
@@ -285,20 +282,6 @@ describe("gameCrons", () => {
 
                     // Assert
                     expect(cron.gameData.settlementResultFromAdmin).toStrictEqual({});
-                });
-
-                describe("when round result > 1", () => {
-                    it("should start liveGameCrons", async () => {
-                        // Arrange
-                        cron.liveGameCrons = { start: jest.fn() };
-                        cron.gameData.result = 1.1;
-
-                        // Act
-                        await cron.proceed();
-
-                        // Assert
-                        expect(cron.liveGameCrons.start).toBeCalled();
-                    });
                 });
             });
         });
