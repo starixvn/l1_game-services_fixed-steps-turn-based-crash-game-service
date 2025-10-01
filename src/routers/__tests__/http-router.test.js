@@ -14,10 +14,12 @@ describe("httpRouter", () => {
             audiences: [],
         },
     };
+    /** @type {HttpRouter} */
     let router;
 
     beforeEach(() => {
         router = new HttpRouter(appConfigs, {}, {}, {}, logService);
+        router.gameData = { settlementResultFromAdmin: {} };
     });
 
     afterEach(() => {
@@ -47,7 +49,7 @@ describe("httpRouter", () => {
                 router.handleSetBoard({}, res);
 
                 // Assert
-                expect(logService.logError).toBeCalledWith("receives a result cheating call with invalid params.");
+                expect(logService.logError).toHaveBeenCalledWith("receives a result cheating call with invalid params.");
             });
 
             it("should response false", () => {
@@ -55,20 +57,20 @@ describe("httpRouter", () => {
                 router.handleSetBoard(undefined, res);
 
                 // Assert
-                expect(res.send).toBeCalledWith(false);
+                expect(res.send).toHaveBeenCalledWith(false);
             });
         });
 
         describe("when param is valid", () => {
-            const params = { result: 1, roundId: 1 };
+            const params = { result: 1, nickName: "testUser" };
 
             it("should call logService.logWarning", () => {
                 // Act
                 router.handleSetBoard(params, res);
 
                 // Assert
-                expect(logService.logWarning).toBeCalledWith(
-                    `receives a result cheating call for ${params?.name} with the board as ${params.result}.`
+                expect(logService.logWarning).toHaveBeenCalledWith(
+                    `receives a result cheating call for ${params?.nickName} with the board as ${params.result}.`
                 );
             });
 
@@ -78,8 +80,7 @@ describe("httpRouter", () => {
 
                 // Assert
                 expect(router.gameData.settlementResultFromAdmin).toStrictEqual({
-                    result: params.result,
-                    roundId: params.roundId,
+                    [params.nickName]: params.result,
                 });
             });
 
@@ -88,7 +89,23 @@ describe("httpRouter", () => {
                 router.handleSetBoard(params, res);
 
                 // Assert
-                expect(res.send).toBeCalledWith(true);
+                expect(res.send).toHaveBeenCalledWith(true);
+            });
+        });
+
+        describe("when error occurs", () => {
+            const params = { result: 1, nickName: "testUser" };
+
+            it("should handle error and response false", () => {
+                // Arrange
+                router.gameData = null; // Force an error
+
+                // Act
+                router.handleSetBoard(params, res);
+
+                // Assert
+                expect(logService.logError).toHaveBeenCalledWith(expect.any(Error));
+                expect(res.send).toHaveBeenCalledWith(false);
             });
         });
     });
