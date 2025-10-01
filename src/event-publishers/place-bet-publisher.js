@@ -2,11 +2,6 @@ import { Table } from "sc-game-base";
 import { Systems } from "sc-game-base/src/constants/systems";
 
 export default class PlaceBetPublisher extends Table.EventPublishers.TablePlaceBetPublisher {
-    publishSuccessCashOut(playerId, payload, rate) {
-        this.publishToUser(playerId, payload);
-        this.publishToAllUsersExcept(playerId, { otherPlayer: { ...payload, rate } });
-    }
-
     publishMineResult(playerId, payload) {
         this.publishToUser(playerId, payload);
 
