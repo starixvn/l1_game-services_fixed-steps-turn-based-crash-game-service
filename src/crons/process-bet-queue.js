@@ -127,7 +127,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             await this.updateUserStakeLevel(player, balance.minBet, balance.maxBet);
         }
 
-        if (currentMultiplier == 0) {
+        if (currentMultiplier === 0) {
             this.settleCashOutConsumer.proceedCashOut(player);
         }
     }

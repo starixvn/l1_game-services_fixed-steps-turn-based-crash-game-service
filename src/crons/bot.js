@@ -92,7 +92,7 @@ export default class GameBot extends Table.Crons.TableGameBot {
                 lastActionTime: Date.now(),
             });
 
-            if (multiplier == 0) {
+            if (multiplier === 0) {
                 await this.handleCashout(botId);
             }
         }
@@ -116,21 +116,21 @@ export default class GameBot extends Table.Crons.TableGameBot {
 
     async handleBotActions(botId) {
         try {
+            const action = this.getAction(botId);
+
+            switch (action) {
+                case Actions.Bet:
+                    await this.placeBet(botId);
+                    break;
+                case Actions.Mine:
+                    await this.handleMining(botId);
+                    break;
+                case Actions.CashOut:
+                    await this.handleCashout(botId);
+                    break;
+            }
         } catch (error) {
             logger.logError(error);
-        }
-        const action = this.getAction(botId);
-
-        switch (action) {
-            case Actions.Bet:
-                await this.placeBet(botId);
-                break;
-            case Actions.Mine:
-                await this.handleMining(botId);
-                break;
-            case Actions.CashOut:
-                await this.handleCashout(botId);
-                break;
         }
     }
 
@@ -179,7 +179,7 @@ export default class GameBot extends Table.Crons.TableGameBot {
             playerMine: { playerId: botId, multiplier: updatedMultiplier },
         });
 
-        if (updatedMultiplier == 0) {
+        if (updatedMultiplier === 0) {
             await this.handleCashout(botId);
         }
     }

@@ -97,7 +97,7 @@ export class MineConsumer extends PlaceBetConsumer {
             reachMaxWin: updatedMultiplier * activeBet.amount >= activeBet.maxWin,
         });
 
-        if (updatedMultiplier == 0) {
+        if (updatedMultiplier === 0) {
             await this.settleCashOutConsumer.proceedCashOut(player, true);
         }
     }
