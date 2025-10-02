@@ -2,10 +2,8 @@ import mongoose from "mongoose";
 
 const Schema = new mongoose.Schema({
     id: { type: Number, required: true },
-    result: { type: Object, required: true },
     time: { type: Date, default: new Date() },
     exchangeRateId: { type: Number, required: true },
-    tapCount: { type: Number, required: true },
     name: { type: String, required: true },
     memberId: { type: String, required: true },
     currency: { type: String, required: true },

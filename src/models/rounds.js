@@ -6,7 +6,6 @@ const Schema = new mongoose.Schema({
     playerId: { type: String },
 
     id: { type: Number, required: true },
-    result: { type: Object, required: true },
     time: { type: Date, default: new Date() },
     exchangeRateId: { type: Number, required: true },
     tapCount: { type: Number, required: true },
