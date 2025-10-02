@@ -1,8 +1,12 @@
 import { EventConsumers } from "sc-game-base/src/table";
 import { Actions } from "../constants";
 import { decrypt } from "../helpers/crypto-helper";
-
+import { ProvablyFairConsumer } from "./provably-fair-consumer";
 export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRoundConsumer {
+    /**
+     * @param {Object} dependencies
+     * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
+     */
     constructor({
         definition,
         gameData,
