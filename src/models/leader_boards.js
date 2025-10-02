@@ -9,7 +9,7 @@ const Schema = new mongoose.Schema({
     currency: { type: String, required: true },
     amount: { type: Number, required: true },
     odds: { type: Object, required: true },
-    betwin: { type: Number },
+    betWin: { type: Number },
     result: { type: Array },
     settlementResult: { type: Array },
     paid: { type: Boolean, default: false },

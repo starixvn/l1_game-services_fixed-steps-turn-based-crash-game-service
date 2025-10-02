@@ -337,7 +337,7 @@ describe("SettleGameRoundConsumer", () => {
                 await consumer.settleRound({ roundId, time });
 
                 // Assert
-                expect(mockRound.betwin).toBe(betResult.totalWin);
+                expect(mockRound.betWin).toBe(betResult.totalWin);
                 expect(mockRound.paid).toBe(true);
                 expect(mockRound.reachMaxWin).toBe(false);
             });
