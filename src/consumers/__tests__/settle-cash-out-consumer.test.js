@@ -4,9 +4,9 @@ import mongoose from "mongoose";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../../constants";
 import { BigWinConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } from "../../consumers";
+import { RecentBigWinPublisher } from "../../event-publishers";
 import GameData from "../../game-data";
 import helpers from "../../helpers/notice-helper";
-import { RecentBigWinPublisher } from "../../event-publishers";
 const chance = new Chance();
 
 jest.mock("../../helpers/date-helper", () => ({
@@ -215,12 +215,6 @@ describe("SettleCashOutConsumer", () => {
     });
 
     describe("proceedCashOut", () => {
-        const setupValidBetDetails = () => ({
-            multiplier: 1.5,
-            roundId: chance.natural(),
-            tapCount: 1,
-            amount: 100,
-        });
 
         beforeEach(() => {
             // Setup basic game data structure
@@ -249,11 +243,6 @@ describe("SettleCashOutConsumer", () => {
             jest.spyOn(consumer, "updateGameData");
         });
 
-        const setupSuccessfulCashOut = (betDetails = setupValidBetDetails()) => {
-            consumer.validateCashOut.mockReturnValue(true);
-            consumer.getCashOutBet.mockResolvedValue(betDetails);
-            return betDetails;
-        };
 
         describe("when validation fails", () => {
             beforeEach(() => {
@@ -358,7 +347,7 @@ describe("SettleCashOutConsumer", () => {
                     tapCount: betDetails.tapCount,
                 });
             });
-            //it has big win
+
             describe("and has big win", () => {
                 it("should publish recent big win with correct params", async () => {
                     // Arrange

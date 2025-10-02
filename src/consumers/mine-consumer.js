@@ -144,6 +144,4 @@ export class MineConsumer extends PlaceBetConsumer {
             notice: { errorCode },
         });
     }
-
-    resetAllBotData() {}
 }

@@ -2,32 +2,31 @@ import awilix from "awilix";
 import { Table } from "sc-game-base";
 import { MaxCombinedClientSeeds } from "./constants";
 import {
+    BigWinConsumer,
     CashOutConsumer,
+    GameResultServiceConsumer,
     InGameConsumer,
+    MineConsumer,
     PlaceBetConsumer,
+    ProvablyFairConsumer,
     SettleCashOutConsumer,
     SettleGameRoundConsumer,
     UnsettledRoundConsumer,
-    MineConsumer,
-    ProvablyFairConsumer,
-    GameResultServiceConsumer,
     UserDisconnectConsumer,
-    BigWinConsumer,
 } from "./consumers";
 import Bot from "./crons/bot";
 import GameCrons from "./crons/game-crons";
 import ProcessBetQueue from "./crons/process-bet-queue";
 import {
-    LiveGamePublisher,
     PlaceBetPublisher,
+    RecentBigWinPublisher,
     RoundResultPublisher,
     UserBetResultPublisher,
-    RecentBigWinPublisher,
 } from "./event-publishers";
-import { BetLogs, Bets, BigWins, Results, Rounds, tempBetLogs, tempBets, umInfo } from "./models";
+import { BetLogs, BigWins, Results, Rounds, umInfo } from "./models";
+import { HistoryQuery } from "./query-apis";
 import { HttpRouter, SocketRouter } from "./routers";
 import UmInfoWatcher from "./watchers/um-info-watcher";
-import { HistoryQuery } from "./query-apis";
 
 const { asClass, asValue } = awilix;
 

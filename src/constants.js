@@ -5,7 +5,6 @@ const Actions = {
     HalfCashOut: "halfCashOut",
     Refund: "refund",
     Crash: "crash",
-    Mine: "mine",
 };
 
 const MinMultiplierValue = 1.01;
@@ -21,3 +20,4 @@ const Chips = [
 ];
 
 export { Actions, Chips, ClientSeedRange, MaxCombinedClientSeeds, MaxDeltaTime, MinMultiplierValue };
+
