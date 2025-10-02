@@ -83,8 +83,6 @@ export default class GameCron extends Core.Crons.BaseGameCron {
         }
     }
 
-    async processRunningRounds() {}
-
     async proceedUnsettledBets() {
         const unsettledBets = await this.roundsRepository.find({ paid: false }).lean().exec();
 
