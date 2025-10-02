@@ -54,7 +54,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
 
             if (!round || !cashOutLog || !result) {
                 this.logService.logError(`${this.definition.name} Settle Error: Invalid round data: ${roundId}`);
-                return;
+                return 0;
             }
 
             const winAmount = Math.min(round.amount * this.getMultiplier(cashOutLog), round.maxWin);
@@ -98,12 +98,14 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
 
         if (playerGameData) {
             playerGameData.betTracks = {};
-            playerGameData.activeBet = undefined;
+            playerGameData.activeBet = null;
         }
     }
 
     getMultiplier(cashOutLog) {
-        if (!cashOutLog) return 0;
+        if (!cashOutLog) {
+            return 0;
+        }
 
         return cashOutLog.multiplier;
     }
