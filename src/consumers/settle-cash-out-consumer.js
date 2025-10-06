@@ -31,9 +31,7 @@ export class SettleCashOutConsumer {
     validateCashOut(player) {
         const playerData = this.gameData.ingame[player.profile.name];
         const betTracks = playerData?.betTracks;
-        const isHavingBet = betTracks?.[Actions.Bet];
-
-        return isHavingBet;
+        return betTracks?.[Actions.Bet];
     }
 
     async proceedCashOut(player, isAutoCashOut = false) {

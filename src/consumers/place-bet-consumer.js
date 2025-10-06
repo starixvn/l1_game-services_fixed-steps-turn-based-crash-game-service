@@ -77,13 +77,15 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
     }
 
     consume(player, payload) {
-        payload.action === Actions.Bet && this.gameData.roundId++;
+        if (payload.action === Actions.Bet) {
+            this.gameData.roundId++;
+        }
         Object.assign(payload, {
             amount: payload.amount >> 0,
             receivedTime: new Date(),
             mode: payload.m ?? this.DisplayMode.Landscape,
             roundId: this.gameData.roundId,
-            clientSeed: payload.clientSeed, //TODO: remove default value
+            clientSeed: payload.clientSeed,
         });
 
         if (

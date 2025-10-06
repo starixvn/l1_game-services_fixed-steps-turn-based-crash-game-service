@@ -11,7 +11,7 @@ import { calculateIncrement } from "../helpers/crash-point-helper";
 import { roundFloat } from "../helpers/number-helper";
 import { isBigWin } from "../helpers/result-helper";
 
-export default class GameBot extends Table.Crons.TableGameBot {
+export default class Bot extends Table.Crons.TableGameBot {
     /**
      * @param {BigWinConsumer} bigWinConsumer
      * @param {RecentBigWinPublisher} recentBigWinPublisher
@@ -80,7 +80,7 @@ export default class GameBot extends Table.Crons.TableGameBot {
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
-            const multiplier = result > 1 ? 1.00 : 0;
+            const multiplier = result > 1 ? 1.0 : 0;
 
             this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
 
