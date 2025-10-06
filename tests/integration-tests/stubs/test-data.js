@@ -41,6 +41,7 @@ const userBetData = ({ uid, name, playerId }) => {
             time: new Date(),
             amount: 100,
             betWin: 0,
+            betwin: 0,
             freeBet: false,
             roundId: 1,
             paid: false,

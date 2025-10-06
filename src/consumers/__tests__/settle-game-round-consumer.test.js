@@ -262,6 +262,7 @@ describe("SettleGameRoundConsumer", () => {
                 amount: 100,
                 totalAmount: 100,
                 maxWin: 1000,
+                betwin: 100,
                 betWin: 102,
                 uid: chance.guid(),
                 name: player.profile.name,
@@ -337,6 +338,7 @@ describe("SettleGameRoundConsumer", () => {
                 await consumer.settleRound({ roundId, time });
 
                 // Assert
+                expect(mockRound.betwin).toBe(betResult.totalWin);
                 expect(mockRound.betWin).toBe(betResult.totalWin);
                 expect(mockRound.paid).toBe(true);
                 expect(mockRound.reachMaxWin).toBe(false);

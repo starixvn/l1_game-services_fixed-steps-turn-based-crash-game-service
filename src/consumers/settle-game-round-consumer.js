@@ -62,6 +62,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
             const betResult = this.calculateBetResult(round.amount, winAmount);
 
             round.betWin = betResult.totalWin;
+            round.betwin = betResult.totalWin;
             round.result = +crashPoint;
             round.paid = true;
             round.tapCount = betLogs.length - 1;

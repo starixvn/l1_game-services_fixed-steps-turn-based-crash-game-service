@@ -5,6 +5,7 @@ const schema = new mongoose.Schema({
     name: { type: String, required: true },
 
     amount: { type: Number, default: 0 },
+    betwin: { type: Number, default: 0 },
     betWin: { type: Number, default: 0 },
     time: { type: Date },
 
