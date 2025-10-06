@@ -39,6 +39,7 @@ describe("MineConsumer", () => {
         maxWin: 1000,
         roundId: "round-123",
         currentMultiplier: 1.5,
+        multiplierMode: 1,
     };
 
     const mockGameDataIngame = {
@@ -62,12 +63,16 @@ describe("MineConsumer", () => {
         gameConfigs: {
             crashConfig: {
                 maxMultiplier: 10.0,
-                multiplierConfigs: {
-                    stages: [
-                        { minMultiplier: 1.0, maxMultiplier: 2.0, increment: 0.1 },
-                        { minMultiplier: 2.0, maxMultiplier: 5.0, increment: 0.2 },
-                    ],
-                },
+                multiplierConfigs: [
+                    {
+                        mode: 1,
+                        values: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                    },
+                    {
+                        mode: 2,
+                        values: [2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0]
+                    }
+                ],
             },
         },
         exchangeRates: {
@@ -147,7 +152,7 @@ describe("MineConsumer", () => {
 
             // Assert
             expect(validateMineSpy).toHaveBeenCalledWith(mockPlayer, payload);
-            expect(handleMineSpy).toHaveBeenCalledWith(mockPlayer, mockActiveBet, payload.clientSendTime);
+            expect(handleMineSpy).toHaveBeenCalledWith(mockPlayer, mockActiveBet, payload);
         });
 
         it("should handle validation failure", async () => {
@@ -235,10 +240,10 @@ describe("MineConsumer", () => {
             const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, mockActiveBet, clientSendTime);
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime });
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.multiplierConfigs);
+            expect(calculateIncrement).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.multiplierConfigs[0]);
             expect(roundFloat).toHaveBeenCalledWith(1.6);
             expect(insertMineBetLogSpy).toHaveBeenCalledWith(mockPlayer, mockActiveBet, {
                 clientSendTime,
@@ -261,7 +266,7 @@ describe("MineConsumer", () => {
             const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, mockActiveBet, Date.now());
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
             expect(insertMineBetLogSpy).toHaveBeenCalledWith(
@@ -286,7 +291,7 @@ describe("MineConsumer", () => {
             const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, mockActiveBet, Date.now());
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
             expect(insertMineBetLogSpy).toHaveBeenCalledWith(
@@ -307,7 +312,7 @@ describe("MineConsumer", () => {
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, mockActiveBet, Date.now());
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
             expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, true);
@@ -321,7 +326,7 @@ describe("MineConsumer", () => {
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, mockActiveBet, Date.now());
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
             expect(mockPublisher.publishMineResult).toHaveBeenCalledWith("player-123", {
@@ -340,7 +345,7 @@ describe("MineConsumer", () => {
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
             // Act
-            await consumer.handleMine(mockPlayer, activeBetWithLowMaxWin, Date.now());
+            await consumer.handleMine(mockPlayer, activeBetWithLowMaxWin, { clientSendTime: Date.now() });
 
             // Assert
             expect(mockPublisher.publishMineResult).toHaveBeenCalledWith("player-123", {
@@ -382,6 +387,7 @@ describe("MineConsumer", () => {
                 result: true,
                 multiplier: 1.6,
                 roundId: "round-123",
+                multiplierMode: 1,
                 siteId: "site-456",
                 currency: "USD",
                 rate: 1.0,

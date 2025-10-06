@@ -220,7 +220,7 @@ describe("GameBots", () => {
             await bot.placeBet("bot1");
 
             // Assert
-            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 1.01, 50, 1000);
+            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 1, 50, 1000);
         });
 
         it("should set active bot state", async () => {
@@ -242,9 +242,10 @@ describe("GameBots", () => {
             expect(bot.activeBots.get("bot1")).toEqual({
                 amount: 50,
                 result: expect.any(Number),
-                multiplier: 1.01,
+                multiplier: 1,
                 tapCount: 1,
                 lastActionTime: expect.any(Number),
+                multiplierMode: expect.any(Number),
             });
         });
 
@@ -469,7 +470,12 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [],
+                    multiplierConfigs: [
+                        {
+                            mode: 1,
+                            values: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                        }
+                    ],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -477,6 +483,7 @@ describe("GameBots", () => {
                 result: 3.0,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode: 1,
             });
             const { calculateIncrement } = require("../../helpers/crash-point-helper");
             const { roundFloat } = require("../../helpers/number-helper");
@@ -487,7 +494,7 @@ describe("GameBots", () => {
             await bot.handleMining("bot1");
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.multiplierConfigs);
+            expect(calculateIncrement).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.multiplierConfigs[0]);
             expect(roundFloat).toHaveBeenCalledWith(1.6);
         });
 

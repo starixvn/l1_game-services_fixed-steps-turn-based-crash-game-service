@@ -36,7 +36,7 @@ export class MineConsumer extends PlaceBetConsumer {
             const playerGameData = this.gameData.ingame[playerName];
             const activeBet = playerGameData.activeBet;
 
-            await this.handleMine(player, activeBet, payload.clientSendTime);
+            await this.handleMine(player, activeBet, payload);
         } catch (err) {
             this.logService.logError(err);
             this.publishMineFailed(player, noticeHelper.invalidMine);
@@ -66,15 +66,19 @@ export class MineConsumer extends PlaceBetConsumer {
         };
     }
 
-    async handleMine(player, activeBet, clientSendTime) {
+    async handleMine(player, activeBet, payload) {
         const playerName = player.profile.name;
         const ingameData = this.gameData.ingame[playerName];
         const provablyFair = this.gameData.provablyFair[playerName];
         const multiplier = ingameData.activeBet.currentMultiplier;
-        const increment = calculateIncrement(multiplier, this.gameData.gameConfigs.crashConfig.multiplierConfigs);
+        const multiplierConfigs = this.gameData.gameConfigs.crashConfig.multiplierConfigs;
+        const currentMultiplierConfig = multiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
+        const increment = calculateIncrement(multiplier, currentMultiplierConfig);
         let updatedMultiplier = 0;
 
-        if (multiplier < this.gameData.gameConfigs.crashConfig.maxMultiplier) {
+        const maxMultiplier = currentMultiplierConfig.values[currentMultiplierConfig.values.length - 1];
+
+        if (multiplier < maxMultiplier) {
             updatedMultiplier = roundFloat(multiplier + increment);
             updatedMultiplier = updatedMultiplier > provablyFair.finalResult ? 0 : updatedMultiplier;
         }
@@ -84,7 +88,7 @@ export class MineConsumer extends PlaceBetConsumer {
         const result = provablyFair.finalResult;
 
         await this.insertMineBetLog(player, activeBet, {
-            clientSendTime,
+            clientSendTime: payload.clientSendTime,
             increment,
             result,
             updatedMultiplier,
@@ -117,6 +121,7 @@ export class MineConsumer extends PlaceBetConsumer {
             result: generateTapResult(result),
             multiplier: updatedMultiplier,
             roundId: activeBet.roundId,
+            multiplierMode: activeBet.multiplierMode,
         };
 
         if (player.session) {

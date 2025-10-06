@@ -400,7 +400,7 @@ describe("ProcessBetQueue", () => {
             await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
 
             // Assert
-            expect(proceedBetQueue.insertBet).toHaveBeenCalledWith(player, roundId, payload, rate, 1.01);
+            expect(proceedBetQueue.insertBet).toHaveBeenCalledWith(player, roundId, payload, rate, 1);
         });
 
         it("should call insertBetLog", async () => {
@@ -408,7 +408,7 @@ describe("ProcessBetQueue", () => {
             await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
 
             // Assert
-            expect(proceedBetQueue.insertBetLog).toHaveBeenCalledWith(player, roundId, payload, 1.01);
+            expect(proceedBetQueue.insertBetLog).toHaveBeenCalledWith(player, roundId, payload, 1);
         });
 
         it("should set activeBet in gameData", async () => {
@@ -418,7 +418,7 @@ describe("ProcessBetQueue", () => {
             // Assert
             expect(gameData.ingame[player.profile.name].activeBet).toEqual({
                 ...payload,
-                currentMultiplier: 1.01,
+                currentMultiplier: 1,
                 tapCount: 1,
                 maxWin: 1000,
             });

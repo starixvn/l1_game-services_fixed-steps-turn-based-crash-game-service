@@ -3,13 +3,13 @@ import { helpers, logger } from "sc-common";
 import { Table } from "sc-game-base";
 import { Systems } from "sc-game-base/src/constants";
 import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
+import * as util from "util";
 import { Actions } from "../constants";
 import { BigWinConsumer } from "../consumers";
 import { RecentBigWinPublisher } from "../event-publishers";
 import { calculateIncrement } from "../helpers/crash-point-helper";
 import { roundFloat } from "../helpers/number-helper";
 import { isBigWin } from "../helpers/result-helper";
-import * as util from "util";
 
 export default class GameBot extends Table.Crons.TableGameBot {
     /**
@@ -80,9 +80,11 @@ export default class GameBot extends Table.Crons.TableGameBot {
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
-            const multiplier = result > 1 ? 1.01 : 0;
+            const multiplier = result > 1 ? 1.00 : 0;
 
             this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
+
+            const multiplierMode = this.chance.integer({ min: 1, max: 4 });
 
             this.activeBots.set(botId, {
                 amount: betAmount,
@@ -90,6 +92,7 @@ export default class GameBot extends Table.Crons.TableGameBot {
                 multiplier,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode,
             });
 
             if (multiplier === 0) {
@@ -166,7 +169,9 @@ export default class GameBot extends Table.Crons.TableGameBot {
 
     async handleMining(botId) {
         const botState = this.activeBots.get(botId);
-        const increment = calculateIncrement(botState.multiplier, this.gameData.gameConfigs.crashConfig.multiplierConfigs);
+        const multiplierConfigs = this.gameData.gameConfigs.crashConfig.multiplierConfigs;
+        const currentMultiplierConfig = multiplierConfigs.find((config) => config.mode === botState.multiplierMode);
+        const increment = calculateIncrement(botState.multiplier, currentMultiplierConfig);
         let updatedMultiplier = roundFloat(botState.multiplier + increment);
         updatedMultiplier = updatedMultiplier > 1000 || updatedMultiplier > botState.result ? 0 : updatedMultiplier;
         botState.hasMined = true;

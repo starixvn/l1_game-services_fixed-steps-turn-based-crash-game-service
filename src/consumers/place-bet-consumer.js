@@ -1,14 +1,19 @@
-import { Core } from "sc-game-base";
 import { helpers } from "sc-common";
-import { Actions } from "../constants";
+import { Core } from "sc-game-base";
+import { Actions, MultiplierModes } from "../constants";
 
 export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
     composeValidationCriteria(player, payload) {
         const bettingTimeValidationCriteria = this.composeBettingTimeValidationCriteria(player);
+        const multiplierModeValidationCriteria = this.composeMultiplierModeValidationCriteria(payload);
         const betAmountValidationCriteria = this.composeBetAmountValidationCriteria(player, payload.amount);
         const clientSeedValidationCriteria = this.composeClientSeedValidationCriteria(payload.clientSeed);
 
-        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria, clientSeedValidationCriteria);
+        return bettingTimeValidationCriteria.concat(
+            multiplierModeValidationCriteria,
+            betAmountValidationCriteria,
+            clientSeedValidationCriteria
+        );
     }
 
     composeBettingTimeValidationCriteria(player) {
@@ -18,6 +23,15 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
         return [
             {
                 failure: !configs.enabled || !!runningRound,
+                notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
+            },
+        ];
+    }
+
+    composeMultiplierModeValidationCriteria(payload) {
+        return [
+            {
+                failure: !Object.values(MultiplierModes).includes(payload.multiplierMode),
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
         ];
@@ -126,6 +140,7 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
                 roundId: bet.roundId,
                 tapCount: 1,
                 multiplier: 1,
+                multiplierMode: bet.multiplierMode,
             };
         }
     }

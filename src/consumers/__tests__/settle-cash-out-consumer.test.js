@@ -301,6 +301,7 @@ describe("SettleCashOutConsumer", () => {
                     roundId: chance.natural(),
                     tapCount: 1,
                     amount: 100,
+                    multiplierMode: 1,
                 };
 
                 // Setup for successful validation scenario
@@ -308,6 +309,7 @@ describe("SettleCashOutConsumer", () => {
                 consumer.getCashOutBet.mockReturnValue(betDetails);
                 consumer.insertBetLog.mockResolvedValue();
                 consumer.updateGameData.mockResolvedValue();
+                consumer.settleGameRoundConsumer.settleRound.mockResolvedValue(150);
             });
 
             it("should return player with bet details", async () => {
@@ -319,7 +321,10 @@ describe("SettleCashOutConsumer", () => {
                 // Assert
                 expect(result).toEqual({
                     player: realPlayer,
-                    ...betDetails,
+                    multiplier: betDetails.multiplier,
+                    roundId: betDetails.roundId,
+                    tapCount: betDetails.tapCount,
+                    amount: betDetails.amount,
                 });
             });
 
@@ -345,6 +350,7 @@ describe("SettleCashOutConsumer", () => {
                     multiplier: betDetails.multiplier,
                     roundId: betDetails.roundId,
                     tapCount: betDetails.tapCount,
+                    multiplierMode: betDetails.multiplierMode,
                 });
             });
 

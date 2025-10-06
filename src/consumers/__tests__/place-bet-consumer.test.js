@@ -72,9 +72,10 @@ describe("PlaceBetConsumer", () => {
         it("should return combined results of all validation criteria", () => {
             // Arrange
             jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
-            const expectedValue = [{ failure: false }, { failure: false }, { failure: false }];
+            const expectedValue = [{ failure: false }, { failure: false }, { failure: false }, { failure: false }];
 
             // Act
             const actualValue = consumer.composeValidationCriteria(player, payload);
@@ -86,6 +87,7 @@ describe("PlaceBetConsumer", () => {
         it("should call composeBettingTimeValidationCriteria with player", () => {
             // Arrange
             jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
 
@@ -99,6 +101,7 @@ describe("PlaceBetConsumer", () => {
         it("should call composeBetAmountValidationCriteria with player and amount", () => {
             // Arrange
             jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
 
@@ -112,6 +115,7 @@ describe("PlaceBetConsumer", () => {
         it("should call composeClientSeedValidationCriteria with clientSeed", () => {
             // Arrange
             jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
 
