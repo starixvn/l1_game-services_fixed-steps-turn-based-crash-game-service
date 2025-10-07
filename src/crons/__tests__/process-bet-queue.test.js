@@ -36,7 +36,7 @@ describe("ProcessBetQueue", () => {
 
     gameData.gameConfigs = {
         crashConfig: {
-            multiplierConfigs: [],
+            fixedStepsMultiplierConfigs: [],
             maxWinPerRound: 1000,
         },
     };
@@ -605,7 +605,7 @@ describe("ProcessBetQueue", () => {
                     autoCashOut: bet.autoCashOut,
                     clientSeed: bet.clientSeed,
                     totalAmount: bet.amount,
-                    odds: gameData.gameConfigs.crashConfig.multiplierConfigs,
+                    odds: gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs,
                     exchangeRateId: gameData.exchangeRates.exId,
                     multiplier: currentMultiplier,
                     tapCount: 1,

@@ -193,7 +193,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             autoCashOut: bet.autoCashOut,
             clientSeed: bet.clientSeed,
             totalAmount: bet.amount,
-            odds: crashConfig.multiplierConfigs,
+            odds: crashConfig.fixedStepsMultiplierConfigs,
             exchangeRateId: this.gameData.exchangeRates.exId,
             multiplier: currentMultiplier,
             tapCount: 1,

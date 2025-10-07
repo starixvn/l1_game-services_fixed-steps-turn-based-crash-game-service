@@ -470,7 +470,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [
+                    fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
                             values: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
@@ -494,7 +494,7 @@ describe("GameBots", () => {
             await bot.handleMining("bot1");
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.multiplierConfigs[0]);
+            expect(calculateIncrement).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
             expect(roundFloat).toHaveBeenCalledWith(1.6);
         });
 
@@ -503,7 +503,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [],
                 },
             };
             const botState = {
@@ -530,7 +530,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -559,7 +559,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -585,7 +585,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    multiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [],
                 },
             };
             bot.activeBots.set("bot1", {

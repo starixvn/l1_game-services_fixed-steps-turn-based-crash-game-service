@@ -169,8 +169,8 @@ export default class Bot extends Table.Crons.TableGameBot {
 
     async handleMining(botId) {
         const botState = this.activeBots.get(botId);
-        const multiplierConfigs = this.gameData.gameConfigs.crashConfig.multiplierConfigs;
-        const currentMultiplierConfig = multiplierConfigs.find((config) => config.mode === botState.multiplierMode);
+        const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
+        const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === botState.multiplierMode);
         const increment = calculateIncrement(botState.multiplier, currentMultiplierConfig);
         let updatedMultiplier = roundFloat(botState.multiplier + increment);
         updatedMultiplier = updatedMultiplier > 1000 || updatedMultiplier > botState.result ? 0 : updatedMultiplier;

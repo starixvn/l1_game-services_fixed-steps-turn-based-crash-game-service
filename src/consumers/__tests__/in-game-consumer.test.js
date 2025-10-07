@@ -3,9 +3,9 @@ import mongoose from "mongoose";
 import { Core, Table } from "sc-game-base";
 import { Systems } from "sc-game-base/src/constants/systems";
 import { RoundQuery } from "sc-game-base/src/core/query-apis";
+import { MultiplierModes } from "../../constants";
 import { BigWinConsumer, InGameConsumer, ProvablyFairConsumer } from "../../consumers";
 import CrashGameData from "../../game-data";
-import { MultiplierModes } from "../../constants";
 
 describe("in game consumer instance", () => {
     const definition = {
@@ -19,7 +19,7 @@ describe("in game consumer instance", () => {
         },
     };
     const gameData = new CrashGameData(0);
-    const multiplierConfigs = [
+    const fixedStepsMultiplierConfigs = [
         {
             mode: MultiplierModes.Easy,
             values: [
@@ -49,7 +49,7 @@ describe("in game consumer instance", () => {
 
     gameData.gameConfigs = {
         enableFreeBet: true,
-        crashConfig: { maxMultiplier: 2000, maxWinPerRound: 2000, multiplierConfigs },
+        crashConfig: { maxMultiplier: 2000, maxWinPerRound: 2000, fixedStepsMultiplierConfigs },
         odds: {},
     };
 
@@ -149,7 +149,7 @@ describe("in game consumer instance", () => {
                     enableFreeBet: gameData.gameConfigs.enableFreeBet,
                     maxWinPerRound: gameData.gameConfigs.crashConfig.maxWinPerRound,
                     odds: gameData.gameConfigs.odds,
-                    multiplierConfigs,
+                    fixedStepsMultiplierConfigs,
                 },
                 user: {},
                 players: {},
@@ -171,7 +171,7 @@ describe("in game consumer instance", () => {
                 enableFreeBet: gameData.gameConfigs.enableFreeBet,
                 maxWinPerRound: gameData.gameConfigs.crashConfig.maxWinPerRound,
                 odds: gameData.gameConfigs.odds,
-                multiplierConfigs,
+                fixedStepsMultiplierConfigs,
             },
             user: {},
             players: {},

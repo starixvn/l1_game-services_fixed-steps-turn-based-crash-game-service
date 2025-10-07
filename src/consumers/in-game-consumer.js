@@ -46,7 +46,7 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
             odds,
             enableFreeBet,
             maxWinPerRound: crashConfig.maxWinPerRound,
-            multiplierConfigs: crashConfig.multiplierConfigs,
+            fixedStepsMultiplierConfigs: crashConfig.fixedStepsMultiplierConfigs,
         };
         const players = realPlayer.session?.system === Systems.Mobi ? {} : this.buildPlayersPayload(realPlayer);
 

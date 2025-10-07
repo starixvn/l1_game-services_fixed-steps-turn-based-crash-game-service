@@ -63,7 +63,7 @@ describe("MineConsumer", () => {
         gameConfigs: {
             crashConfig: {
                 maxMultiplier: 10.0,
-                multiplierConfigs: [
+                fixedStepsMultiplierConfigs: [
                     {
                         mode: 1,
                         values: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
@@ -243,7 +243,7 @@ describe("MineConsumer", () => {
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime });
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.multiplierConfigs[0]);
+            expect(calculateIncrement).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
             expect(roundFloat).toHaveBeenCalledWith(1.6);
             expect(insertMineBetLogSpy).toHaveBeenCalledWith(mockPlayer, mockActiveBet, {
                 clientSendTime,

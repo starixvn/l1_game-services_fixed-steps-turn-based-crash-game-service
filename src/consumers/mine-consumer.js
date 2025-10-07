@@ -71,8 +71,8 @@ export class MineConsumer extends PlaceBetConsumer {
         const ingameData = this.gameData.ingame[playerName];
         const provablyFair = this.gameData.provablyFair[playerName];
         const multiplier = ingameData.activeBet.currentMultiplier;
-        const multiplierConfigs = this.gameData.gameConfigs.crashConfig.multiplierConfigs;
-        const currentMultiplierConfig = multiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
+        const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
+        const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
         const increment = calculateIncrement(multiplier, currentMultiplierConfig);
         let updatedMultiplier = 0;
 
