@@ -1,5 +1,5 @@
 {
-    "name": "crash-game-service",
+    "name": "fixed-steps-crash-turn-based-game-service",
     "version": "1.0.0",
     "description": "",
     "main": "./src/app.js",

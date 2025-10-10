@@ -76,7 +76,7 @@ export class MineConsumer extends PlaceBetConsumer {
         const increment = calculateIncrement(multiplier, currentMultiplierConfig);
         let updatedMultiplier = 0;
 
-        const maxMultiplier = currentMultiplierConfig.values[currentMultiplierConfig.values.length - 1];
+        const maxMultiplier = currentMultiplierConfig.multiplierSteps[currentMultiplierConfig.multiplierSteps.length - 1];
 
         if (multiplier < maxMultiplier) {
             updatedMultiplier = roundFloat(multiplier + increment);
