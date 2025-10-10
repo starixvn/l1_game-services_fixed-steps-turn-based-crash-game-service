@@ -32,6 +32,30 @@ const userInfosRepository = stubMongoose(mongoose.Model);
 const publisher = new BaseEventPublisher();
 const definition = new TableGameDefinition(gameSettings);
 let gameData = new CrashGameData();
+const fixedStepsMultiplierConfigs = [
+    {
+        mode: 1,
+        multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+    },
+    {
+        mode: 2,
+        multiplierSteps: [2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0],
+    },
+    {
+        mode: 3,
+        multiplierSteps: [3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0],
+    },
+    {
+        mode: 4,
+        multiplierSteps: [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0],
+    },
+];
+
+gameData.gameConfigs = {
+    crashConfig: {
+        fixedStepsMultiplierConfigs,
+    },
+};
 
 function initBot() {
     return new Bot(definition, gameData, publisher, userInfosRepository, tempBetsRepository, tempBetLogsRepository, provablyFairConsumer);
@@ -40,6 +64,11 @@ function initBot() {
 afterEach(() => {
     jest.clearAllMocks();
     gameData = new CrashGameData();
+    gameData.gameConfigs = {
+        crashConfig: {
+            fixedStepsMultiplierConfigs,
+        },
+    };
 });
 describe("GameBots", () => {
     describe("GameBot Constructor", () => {
@@ -214,13 +243,14 @@ describe("GameBots", () => {
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
             await bot.placeBet("bot1");
 
             // Assert
-            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 1, 50, 1000);
+            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 1.0, 50, 1000);
         });
 
         it("should set active bot state", async () => {
@@ -233,6 +263,7 @@ describe("GameBots", () => {
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -242,10 +273,10 @@ describe("GameBots", () => {
             expect(bot.activeBots.get("bot1")).toEqual({
                 amount: 50,
                 result: expect.any(Number),
-                multiplier: 1,
+                multiplier: 1.0,
                 tapCount: 1,
                 lastActionTime: expect.any(Number),
-                multiplierMode: expect.any(Number),
+                multiplierMode: 1,
             });
         });
 
@@ -266,6 +297,47 @@ describe("GameBots", () => {
 
             // Assert
             expect(bot.handleCashout).toHaveBeenCalledWith("bot1");
+        });
+
+        it("should set multiplier to 0 when result is less than firstMultiplier", async () => {
+            // Arrange
+            const bot = initBot();
+            bot.botsInRoom = { bot1: { red: 1000 } };
+            bot.getMaxBet = jest.fn().mockReturnValue(100);
+            bot.getMinBet = jest.fn().mockReturnValue(10);
+            bot.convertAmountToChip = jest.fn().mockReturnValue(50);
+            bot.updateBalanceAndPublishBetPayload = jest.fn();
+            bot.handleCashout = jest.fn();
+            bot.definition.generateResult = jest.fn().mockReturnValue(0.5); // Less than firstMultiplier (1.0)
+            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+
+            // Act
+            await bot.placeBet("bot1");
+
+            // Assert
+            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 0, 50, 1000);
+            expect(bot.activeBots.get("bot1").multiplier).toBe(0);
+        });
+
+        it("should set multiplier to firstMultiplier when result is greater than firstMultiplier", async () => {
+            // Arrange
+            const bot = initBot();
+            bot.botsInRoom = { bot1: { red: 1000 } };
+            bot.getMaxBet = jest.fn().mockReturnValue(100);
+            bot.getMinBet = jest.fn().mockReturnValue(10);
+            bot.convertAmountToChip = jest.fn().mockReturnValue(50);
+            bot.updateBalanceAndPublishBetPayload = jest.fn();
+            bot.handleCashout = jest.fn();
+            bot.definition.generateResult = jest.fn().mockReturnValue(1.5); // Greater than firstMultiplier (1.0)
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+
+            // Act
+            await bot.placeBet("bot1");
+
+            // Assert
+            expect(bot.updateBalanceAndPublishBetPayload).toHaveBeenCalledWith("bot1", 1.0, 50, 1000);
+            expect(bot.activeBots.get("bot1").multiplier).toBe(1.0);
         });
 
         it("should not process bet when user not found", async () => {

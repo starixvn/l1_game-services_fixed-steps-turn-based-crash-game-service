@@ -80,11 +80,13 @@ export default class Bot extends Table.Crons.TableGameBot {
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
-            const multiplier = result > 1 ? 1.0 : 0;
+            
+            const multiplierMode = this.chance.integer({ min: 1, max: 4 });
+            const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find((config) => config.mode === multiplierMode);
+            const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
+            const multiplier = result > firstMultiplier ? firstMultiplier : 0;
 
             this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
-
-            const multiplierMode = this.chance.integer({ min: 1, max: 4 });
 
             this.activeBots.set(botId, {
                 amount: betAmount,

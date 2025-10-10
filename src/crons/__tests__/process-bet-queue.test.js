@@ -36,7 +36,16 @@ describe("ProcessBetQueue", () => {
 
     gameData.gameConfigs = {
         crashConfig: {
-            fixedStepsMultiplierConfigs: [],
+            fixedStepsMultiplierConfigs: [
+                {
+                    mode: 1,
+                    multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                },
+                {
+                    mode: 2,
+                    multiplierSteps: [2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0]
+                }
+            ],
             maxWinPerRound: 1000,
         },
     };
@@ -101,6 +110,7 @@ describe("ProcessBetQueue", () => {
         receivedTime: new Date(),
         time: new Date(),
         clientSeed: "9000",
+        multiplierMode: 1,
     };
 
     beforeEach(() => {
@@ -400,7 +410,7 @@ describe("ProcessBetQueue", () => {
             await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
 
             // Assert
-            expect(proceedBetQueue.insertBet).toHaveBeenCalledWith(player, roundId, payload, rate, 1);
+            expect(proceedBetQueue.insertBet).toHaveBeenCalledWith(player, roundId, payload, rate, 1.0);
         });
 
         it("should call insertBetLog", async () => {
@@ -408,7 +418,7 @@ describe("ProcessBetQueue", () => {
             await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
 
             // Assert
-            expect(proceedBetQueue.insertBetLog).toHaveBeenCalledWith(player, roundId, payload, 1);
+            expect(proceedBetQueue.insertBetLog).toHaveBeenCalledWith(player, roundId, payload, 1.0);
         });
 
         it("should set activeBet in gameData", async () => {
@@ -418,7 +428,7 @@ describe("ProcessBetQueue", () => {
             // Assert
             expect(gameData.ingame[player.profile.name].activeBet).toEqual({
                 ...payload,
-                currentMultiplier: 1,
+                currentMultiplier: 1.0,
                 tapCount: 1,
                 maxWin: 1000,
             });
@@ -483,6 +493,28 @@ describe("ProcessBetQueue", () => {
 
             // Assert
             expect(proceedBetQueue.settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(player);
+        });
+
+        it("should set currentMultiplier to 0 when finalResult is less than firstMultiplier", async () => {
+            // Arrange
+            gameData.provablyFair[player.profile.name].finalResult = 0.5; // Less than firstMultiplier (1.0)
+
+            // Act
+            await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
+
+            // Assert
+            expect(gameData.ingame[player.profile.name].activeBet.currentMultiplier).toBe(0);
+        });
+
+        it("should set currentMultiplier to firstMultiplier when finalResult is greater than firstMultiplier", async () => {
+            // Arrange
+            gameData.provablyFair[player.profile.name].finalResult = 1.5; // Greater than firstMultiplier (1.0)
+
+            // Act
+            await proceedBetQueue.handleSuccessBet(player, balance, roundId, payload);
+
+            // Assert
+            expect(gameData.ingame[player.profile.name].activeBet.currentMultiplier).toBe(1.0);
         });
     });
 
