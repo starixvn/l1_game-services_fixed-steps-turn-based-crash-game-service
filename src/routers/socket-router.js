@@ -54,6 +54,26 @@ export default class SocketRouter extends Routers.BaseSocketRouter {
         }
     }
 
+    async handleGetHistory(payload) {
+        try {
+            if (!this.verify()) {
+                return;
+            }
+
+            const responseKey = payload.responseKey ?? "history";
+
+            const history = await this.historyQuery.queryHistory(
+                this.gameData.realPlayers[this.socketClient.id],
+                payload.page,
+                payload.pageSize ?? this.definition.historyPageSize
+            );
+
+            this.socketClient.emit(this.definition.name, { [responseKey]: history.history });
+        } catch (error) {
+            this.logService.logError(error);
+        }
+    }
+
     async handleBetDetails(payload) {
         try {
             if (!this.verify()) {

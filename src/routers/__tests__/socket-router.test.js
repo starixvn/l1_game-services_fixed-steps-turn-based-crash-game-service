@@ -11,7 +11,7 @@ describe("SocketRouter", () => {
         id: 99999,
     };
 
-    const mockDefinition = { name: "testGame" };
+    const mockDefinition = { name: "testGame", historyPageSize: 10 };
     const mockLogService = { logError: jest.fn() };
 
     /** @type {CashOutConsumer} */
@@ -21,7 +21,7 @@ describe("SocketRouter", () => {
     const gameResultServiceConsumer = { getUrl: jest.fn() };
 
     /** @type {HistoryQuery} */
-    const historyQuery = { queryProvablyFair: jest.fn() };
+    const historyQuery = { queryProvablyFair: jest.fn(), queryHistory: jest.fn() };
 
     /** @type {SocketRouter} */
     let socketRouter;
@@ -209,6 +209,110 @@ describe("SocketRouter", () => {
 
             // Assert
             expect(mockLogService.logError).toHaveBeenCalledWith(error);
+        });
+    });
+
+    describe("handleGetHistory", () => {
+        const payload = { page: 1, pageSize: 20 };
+        const history = { history: [{ id: 1 }, { id: 2 }] };
+
+        beforeEach(() => {
+            socketRouter.verify = jest.fn();
+            socketRouter.gameData = {
+                realPlayers: {
+                    [socketClient.id]: socketClient,
+                },
+            };
+            historyQuery.queryHistory.mockResolvedValueOnce(history);
+        });
+
+        it("should call verify", async () => {
+            // Act
+            await socketRouter.handleGetHistory(payload);
+
+            // Assert
+            expect(socketRouter.verify).toHaveBeenCalled();
+        });
+
+        describe("when event is valid", () => {
+            beforeEach(() => {
+                socketRouter.verify.mockReturnValueOnce(true);
+            });
+
+            it("should query history with correct parameters", async () => {
+                // Act
+                await socketRouter.handleGetHistory(payload);
+
+                // Assert
+                expect(historyQuery.queryHistory).toHaveBeenCalledWith(
+                    socketClient,
+                    payload.page,
+                    payload.pageSize
+                );
+            });
+
+            it("should use default page size when not provided", async () => {
+                // Arrange
+                const payloadWithoutPageSize = { page: 1 };
+
+                // Act
+                await socketRouter.handleGetHistory(payloadWithoutPageSize);
+
+                // Assert
+                expect(historyQuery.queryHistory).toHaveBeenCalledWith(
+                    socketClient,
+                    payloadWithoutPageSize.page,
+                    mockDefinition.historyPageSize
+                );
+            });
+
+            it("should emit history with default response key", async () => {
+                // Act
+                await socketRouter.handleGetHistory(payload);
+
+                // Assert
+                expect(socketClient.emit).toHaveBeenCalledWith(
+                    mockDefinition.name,
+                    { history: history.history }
+                );
+            });
+
+            it("should emit history with custom response key", async () => {
+                // Arrange
+                const payloadWithCustomKey = { ...payload, responseKey: "customKey" };
+
+                // Act
+                await socketRouter.handleGetHistory(payloadWithCustomKey);
+
+                // Assert
+                expect(socketClient.emit).toHaveBeenCalledWith(
+                    mockDefinition.name,
+                    { customKey: history.history }
+                );
+            });
+
+        });
+
+        describe("when event is invalid", () => {
+            beforeEach(() => {
+                socketRouter.verify.mockReturnValueOnce(false);
+            });
+
+            it("should not query history", async () => {
+                // Act
+                await socketRouter.handleGetHistory(payload);
+
+                // Assert
+                expect(historyQuery.queryHistory).not.toHaveBeenCalled();
+            });
+
+            it("should not emit history", async () => {
+                // Act
+                await socketRouter.handleGetHistory(payload);
+
+                // Assert
+                expect(socketClient.emit).not.toHaveBeenCalled();
+            });
         });
     });
 });
