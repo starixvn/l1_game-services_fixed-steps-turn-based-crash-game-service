@@ -1,47 +1,12 @@
-import { calculateIncrement, findStage } from "../crash-point-helper";
+import { calculateIncrement } from "../crash-point-helper";
 
 describe("crash-point-helper", () => {
-    const mockStageConfigs = {
-        initialMultiplier: 1.2,
-        stages: [
-            { minMultiplier: 1.0, maxMultiplier: 2.0, increment: 0.1 },
-            { minMultiplier: 2.0, maxMultiplier: 5.0, increment: 0.2 },
-            { minMultiplier: 5.0, maxMultiplier: 10.0, increment: 0.5 },
+    const mockMultiplierConfig = {
+        multiplierSteps: [
+            1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8,
+            5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0,
         ],
     };
-
-    const mockMultiplierConfig = {
-        multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
-    };
-
-    describe("findStage", () => {
-        it("should find correct stage for given multiplier", () => {
-            const stages = mockStageConfigs.stages;
-            const multiplier1 = 1.5;
-            const multiplier2 = 3.0;
-            const multiplier3 = 7.0;
-
-            const result1 = findStage(multiplier1, stages);
-            const result2 = findStage(multiplier2, stages);
-            const result3 = findStage(multiplier3, stages);
-
-            expect(result1).toEqual(stages[0]);
-            expect(result2).toEqual(stages[1]);
-            expect(result3).toEqual(stages[2]);
-        });
-
-        it("should return undefined for multiplier outside stages range", () => {
-            const stages = mockStageConfigs.stages;
-            const multiplier1 = 0.5;
-            const multiplier2 = 11.0;
-
-            const result1 = findStage(multiplier1, stages);
-            const result2 = findStage(multiplier2, stages);
-
-            expect(result1).toBeUndefined();
-            expect(result2).toBeUndefined();
-        });
-    });
 
     describe("calculateIncrement", () => {
         it.each([

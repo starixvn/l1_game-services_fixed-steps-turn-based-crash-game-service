@@ -62,7 +62,6 @@ describe("MineConsumer", () => {
         },
         gameConfigs: {
             crashConfig: {
-                maxMultiplier: 10.0,
                 fixedStepsMultiplierConfigs: [
                     {
                         mode: 1,
@@ -284,30 +283,36 @@ describe("MineConsumer", () => {
             });
         });
 
-        it("should not update multiplier when at max multiplier", async () => {
+        it("should publish mine failed when already at max multiplier", async () => {
             // Arrange
-            mockGameData.ingame.testPlayer.activeBet.currentMultiplier = 10.0;
-            const insertMineBetLogSpy = jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
-            const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
+            mockGameData.ingame.testPlayer.activeBet.currentMultiplier = 2.0; // Set to max multiplier from config
+            const publishMineFailedSpy = jest.spyOn(consumer, "publishMineFailed").mockImplementation();
 
             // Act
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
-            expect(insertMineBetLogSpy).toHaveBeenCalledWith(
-                mockPlayer,
-                mockActiveBet,
-                expect.objectContaining({
-                    updatedMultiplier: 0,
-                })
-            );
-            expect(updatePlayerGameStateSpy).toHaveBeenCalledWith("testPlayer", 0);
+            expect(publishMineFailedSpy).toHaveBeenCalledWith(mockPlayer, noticeHelper.invalidMine);
         });
 
         it("should call settleCashOutConsumer when multiplier is 0", async () => {
             // Arrange
             mockGameData.provablyFair.testPlayer.finalResult = 1.0;
             roundFloat.mockReturnValue(0); // Force multiplier to be 0
+            jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
+            jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
+
+            // Act
+            await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
+
+            // Assert
+            expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, true);
+        });
+
+        it("should call settleCashOutConsumer when reaching max multiplier through progression", async () => {
+            // Arrange
+            mockGameData.ingame.testPlayer.activeBet.currentMultiplier = 1.9; // One step below max
+            roundFloat.mockImplementation((value) => 2.0); // Return max multiplier
             jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 

@@ -1,7 +1,3 @@
-function findStage(multiplier, stages) {
-    return stages.find((stage) => multiplier >= stage.minMultiplier && multiplier <= stage.maxMultiplier);
-}
-
 function getInitialTapMultiplier(stageConfigs) {
     return stageConfigs.initialMultiplier;
 }
@@ -25,5 +21,5 @@ function calculateIncrement(multiplier, currentMultiplierConfig) {
     return multiplierSteps[currentIndex + 1] - multiplier;
 }
 
-export { calculateIncrement, findStage, generateTapResult, getInitialTapMultiplier };
+export { calculateIncrement, generateTapResult, getInitialTapMultiplier };
 

@@ -575,7 +575,12 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    fixedStepsMultiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [
+                        {
+                            mode: 1,
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                        }
+                    ],
                 },
             };
             const botState = {
@@ -583,6 +588,7 @@ describe("GameBots", () => {
                 result: 3.0,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode: 1,
             };
             bot.activeBots.set("bot1", botState);
             const { calculateIncrement } = require("../../helpers/crash-point-helper");
@@ -602,7 +608,12 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    fixedStepsMultiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [
+                        {
+                            mode: 1,
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                        }
+                    ],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -610,6 +621,7 @@ describe("GameBots", () => {
                 result: 3.0,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode: 1,
             });
             const { calculateIncrement } = require("../../helpers/crash-point-helper");
             const { roundFloat } = require("../../helpers/number-helper");
@@ -631,7 +643,12 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    fixedStepsMultiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [
+                        {
+                            mode: 1,
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                        }
+                    ],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -639,6 +656,7 @@ describe("GameBots", () => {
                 result: 3.0,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode: 1,
             });
             const { calculateIncrement } = require("../../helpers/crash-point-helper");
             const { roundFloat } = require("../../helpers/number-helper");
@@ -657,7 +675,12 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.gameData.gameConfigs = {
                 crashConfig: {
-                    fixedStepsMultiplierConfigs: [],
+                    fixedStepsMultiplierConfigs: [
+                        {
+                            mode: 1,
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+                        }
+                    ],
                 },
             };
             bot.activeBots.set("bot1", {
@@ -665,6 +688,7 @@ describe("GameBots", () => {
                 result: 3.0,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode: 1,
             });
             const { calculateIncrement } = require("../../helpers/crash-point-helper");
             const { roundFloat } = require("../../helpers/number-helper");

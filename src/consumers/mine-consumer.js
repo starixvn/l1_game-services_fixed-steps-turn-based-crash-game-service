@@ -75,8 +75,12 @@ export class MineConsumer extends PlaceBetConsumer {
         const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
         const increment = calculateIncrement(multiplier, currentMultiplierConfig);
         let updatedMultiplier = 0;
+        const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
-        const maxMultiplier = currentMultiplierConfig.multiplierSteps[currentMultiplierConfig.multiplierSteps.length - 1];
+        if (multiplier === maxMultiplier) {
+            this.publishMineFailed(player, noticeHelper.invalidMine);
+            return;
+        }
 
         if (multiplier < maxMultiplier) {
             updatedMultiplier = roundFloat(multiplier + increment);
@@ -101,7 +105,7 @@ export class MineConsumer extends PlaceBetConsumer {
             reachMaxWin: updatedMultiplier * activeBet.amount >= activeBet.maxWin,
         });
 
-        if (updatedMultiplier === 0) {
+        if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
             await this.settleCashOutConsumer.proceedCashOut(player, true);
         }
     }

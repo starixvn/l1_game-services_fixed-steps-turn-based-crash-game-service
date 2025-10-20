@@ -80,9 +80,11 @@ export default class Bot extends Table.Crons.TableGameBot {
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
-            
+
             const multiplierMode = this.chance.integer({ min: 1, max: 4 });
-            const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find((config) => config.mode === multiplierMode);
+            const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find(
+                (config) => config.mode === multiplierMode
+            );
             const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
             const multiplier = result > firstMultiplier ? firstMultiplier : 0;
 
@@ -185,8 +187,9 @@ export default class Bot extends Table.Crons.TableGameBot {
         this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
             playerMine: { playerId: botId, multiplier: updatedMultiplier },
         });
+        const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
-        if (updatedMultiplier === 0) {
+        if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
             await this.handleCashout(botId);
         }
     }
