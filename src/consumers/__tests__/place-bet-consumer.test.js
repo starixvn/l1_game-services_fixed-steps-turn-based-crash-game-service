@@ -39,7 +39,6 @@ describe("PlaceBetConsumer", () => {
                 maxMultiplier: 5000,
             },
             stageConfigs: {
-                initialMultiplier: 1.0,
             },
             enabled: true,
         },
@@ -349,6 +348,52 @@ describe("PlaceBetConsumer", () => {
             // Assert
             expect(result[1].notice.maxBet).toBe(8); // Should use player max bet
         });
+
+        it("should return failure when float amount is below min bet", () => {
+            // Arrange
+            const amount = 5.5; // Below min bet of 6
+
+            // Act
+            const result = consumer.composeBetAmountValidationCriteria(player, amount);
+
+            // Assert
+            expect(result[0].failure).toBe(true);
+        });
+
+        it("should return failure when float amount is above max bet", () => {
+            // Arrange
+            const amount = 8.5; // Above max bet of 8
+
+            // Act
+            const result = consumer.composeBetAmountValidationCriteria(player, amount);
+
+            // Assert
+            expect(result[1].failure).toBe(true);
+        });
+
+        it("should return no failure for float amount within limits", () => {
+            // Arrange
+            const amount = 7.5; // Within limits (6-8)
+
+            // Act
+            const result = consumer.composeBetAmountValidationCriteria(player, amount);
+
+            // Assert
+            expect(result[0].failure).toBe(false);
+            expect(result[1].failure).toBe(false);
+        });
+
+        it("should handle decimal amounts correctly in validation", () => {
+            // Arrange
+            const amount = 6.99; // Just below 7, within limits
+
+            // Act
+            const result = consumer.composeBetAmountValidationCriteria(player, amount);
+
+            // Assert
+            expect(result[0].failure).toBe(false);
+            expect(result[1].failure).toBe(false);
+        });
     });
 
     describe("composeClientSeedValidationCriteria", () => {
@@ -531,12 +576,23 @@ describe("PlaceBetConsumer", () => {
             expect(gameData.roundId).toBe(initialRoundId);
         });
 
-        it("should convert amount to integer", () => {
+        it("should preserve amount as float when provided", () => {
+            // Arrange
+            const floatPayload = { ...payload, amount: 10.5 };
+
+            // Act
+            consumer.consume(player, floatPayload);
+
+            // Assert
+            expect(floatPayload.amount).toBe(10.5); // Should preserve float value
+        });
+
+        it("should preserve amount as integer when provided", () => {
             // Act
             consumer.consume(player, payload);
 
             // Assert
-            expect(payload.amount).toBe(10); // Should be converted to integer
+            expect(payload.amount).toBe(10); // Should preserve integer value
         });
 
         it("should set receivedTime to current date", () => {
@@ -754,6 +810,28 @@ describe("PlaceBetConsumer", () => {
             expect(() => {
                 consumer.adjustBetTracks("nonexistent", bet);
             }).not.toThrow();
+        });
+
+        it("should handle float amounts in bet tracks", () => {
+            // Arrange
+            gameData.ingame[player.profile.name] = { betTracks: {} };
+            const bet = {
+                action: Actions.Bet,
+                amount: 7.5,
+                receivedTime: new Date(),
+                roundId: 1,
+            };
+
+            // Act
+            consumer.adjustBetTracks(player.profile.name, bet);
+
+            // Assert
+            const betTrack = gameData.ingame[player.profile.name].betTracks[Actions.Bet];
+            expect(betTrack.amount).toBe(7.5);
+            expect(betTrack.time).toBe(bet.receivedTime);
+            expect(betTrack.roundId).toBe(1);
+            expect(betTrack.tapCount).toBe(1);
+            expect(betTrack.multiplier).toBe(1);
         });
     });
 });
