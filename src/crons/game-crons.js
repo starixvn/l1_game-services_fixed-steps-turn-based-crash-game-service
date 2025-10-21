@@ -118,6 +118,7 @@ export default class GameCron extends Core.Crons.BaseGameCron {
                         tapCount: tapCount,
                         currentMultiplier: multiplier,
                         amount: round.amount,
+                        multiplierMode: round.multiplierMode
                     },
                 };
 

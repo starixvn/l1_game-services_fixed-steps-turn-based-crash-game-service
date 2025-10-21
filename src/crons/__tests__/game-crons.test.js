@@ -259,14 +259,16 @@ describe("GameCrons", () => {
                 uid: "player-1",
                 name: "player1",
                 amount: 100,
-                paid: false
+                paid: false,
+                multiplierMode: 2
             },
             {
                 id: "round-2", 
                 uid: "player-2",
                 name: "player2",
                 amount: 200,
-                paid: false
+                paid: false,
+                multiplierMode: 3
             }
         ];
 
@@ -336,7 +338,8 @@ describe("GameCrons", () => {
                     roundId: "round-1",
                     tapCount: 1,
                     currentMultiplier: 2.5,
-                    amount: 100
+                    amount: 100,
+                    multiplierMode: 2
                 }
             });
         });
@@ -367,8 +370,8 @@ describe("GameCrons", () => {
         it("should handle multiple unsettled bets", async () => {
             // Arrange
             const multipleBets = [
-                { id: "round-1", uid: "player-1", name: "player1", amount: 100, paid: false },
-                { id: "round-2", uid: "player-2", name: "player2", amount: 200, paid: false }
+                { id: "round-1", uid: "player-1", name: "player1", amount: 100, paid: false, multiplierMode: 1 },
+                { id: "round-2", uid: "player-2", name: "player2", amount: 200, paid: false, multiplierMode: 4 }
             ];
             
             roundsRepository.find.mockReturnValue({
