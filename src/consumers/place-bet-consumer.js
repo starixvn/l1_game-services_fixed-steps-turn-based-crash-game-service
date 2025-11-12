@@ -1,6 +1,7 @@
 import { helpers } from "sc-common";
 import { Core } from "sc-game-base";
 import { Actions, MultiplierModes } from "../constants";
+import noticeHelper from "../helpers/notice-helper";
 
 export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
     composeValidationCriteria(player, payload) {
@@ -123,7 +124,7 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
         const name = player.profile.name;
 
         if (!this.gameData.ingame[name]?.betTracks[Actions.Bet] || this.gameData.ingame[name]?.betTracks[Actions.CashOut]) {
-            this.publisher.publishToUser(player.UID, { endBet: -1, notice: helpers.noticeHelper.invalidMine });
+            this.publisher.publishToUser(player.UID, { endBet: -1, notice: noticeHelper.invalidMine });
             return false;
         }
 

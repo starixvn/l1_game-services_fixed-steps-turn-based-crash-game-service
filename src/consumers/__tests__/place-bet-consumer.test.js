@@ -5,6 +5,7 @@ import { Core } from "sc-game-base";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import gameSettings from "../../../src/game-settings";
 import { Actions } from "../../constants";
+import noticeHelper from "../../helpers/notice-helper";
 import { PlaceBetConsumer } from "../place-bet-consumer";
 
 const player = {
@@ -507,7 +508,7 @@ describe("PlaceBetConsumer", () => {
             // Assert
             expect(consumer.publisher.publishToUser).toHaveBeenCalledWith(player.UID, {
                 endBet: -1,
-                notice: helpers.noticeHelper.invalidMine
+                notice: noticeHelper.invalidMine,
             });
         });
 
