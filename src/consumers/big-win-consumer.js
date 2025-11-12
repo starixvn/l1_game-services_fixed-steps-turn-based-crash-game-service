@@ -19,19 +19,13 @@ export default class BigWinConsumer {
      * @param {number} data.roundId
      * @param {number} data.amount
      * @param {number} data.baseAmount
-     * @param {number} data.winningAmount
-     * @param {number} data.baseWinningAmount
-     * @param {number} data.multiplier
      * @param {number} data.rate
      */
-    async add(player, { roundId, amount, baseAmount, winningAmount, baseWinningAmount, multiplier, rate }) {
+    async add(player, { roundId, amount, baseAmount, rate }) {
         const bigWin = {
             name: player.profile.name,
             amount,
             baseAmount,
-            winningAmount,
-            baseWinningAmount,
-            multiplier,
             rate,
             time: new Date(),
             exchangeRateId: this.gameData.exchangeRates.exId,
@@ -54,6 +48,20 @@ export default class BigWinConsumer {
         return bigWin;
     }
 
+    /**
+     * @param {Object} data
+     * @param {number} data.roundId
+     * @param {number} data.winningAmount
+     * @param {number} data.baseWinningAmount
+     * @param {number} data.multiplier
+     */
+    async updateBigWin({ roundId, winningAmount, baseWinningAmount, multiplier }) {
+        return await this.bigWinsRepository.findOneAndUpdate(
+            { roundId },
+            { $set: { multiplier, winningAmount, baseWinningAmount } },
+            { new: true, lean: true, select: "-_id -uid -__v -playerId -operatorId" }
+        );
+    }
     /**
      * @param {Object} realPlayer
      * @returns {Object[]}

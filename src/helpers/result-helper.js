@@ -16,6 +16,6 @@ const generateRawResultForHash = (roundResult) => roundResult;
  * @param {number} multiplier
  * @returns {boolean}
  */
-const isBigWin = (multiplier) => multiplier >= 2;
 
-export { generateResult, getSettlementResult, generateRawResultForHash, isBigWin };
+export { generateRawResultForHash, generateResult, getSettlementResult };
+

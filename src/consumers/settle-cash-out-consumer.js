@@ -4,7 +4,6 @@ import { Actions } from "../constants";
 import { RecentBigWinPublisher } from "../event-publishers";
 import helpers from "../helpers/notice-helper";
 import { roundMultiplier } from "../helpers/number-helper";
-import { isBigWin } from "../helpers/result-helper";
 import BigWinConsumer from "./big-win-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
 
@@ -57,21 +56,15 @@ export class SettleCashOutConsumer {
             playerName: player.profile.name,
         });
 
-        if (isBigWin(multiplier)) {
-            const rate = this.calculateCurrencyRate(player.session);
-            const baseAmount = roundMultiplier(amount, rate);
-            const baseWinningAmount = roundMultiplier(winningAmount, rate);
-            const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
-                roundId,
-                amount,
-                baseAmount,
-                winningAmount,
-                baseWinningAmount,
-                multiplier,
-                rate,
-            });
-            this.recentBigWinPublisher.publish(recentBigWinningWinner);
-        }
+        const rate = this.calculateCurrencyRate(player.session);
+        const baseWinningAmount = roundMultiplier(winningAmount, rate);
+        const recentBigWinningWinner = await this.bigWinConsumer.updateBigWin({
+            roundId,
+            winningAmount,
+            baseWinningAmount,
+            multiplier,
+        });
+        this.recentBigWinPublisher.publish(recentBigWinningWinner);
         return { player, multiplier, roundId, tapCount, amount };
     }
 

@@ -9,7 +9,6 @@ import { BigWinConsumer } from "../consumers";
 import { RecentBigWinPublisher } from "../event-publishers";
 import { getNextMultiplier } from "../helpers/crash-point-helper";
 import { roundMultiplier } from "../helpers/number-helper";
-import { isBigWin } from "../helpers/result-helper";
 
 export default class Bot extends Table.Crons.TableGameBot {
     /**
@@ -98,6 +97,17 @@ export default class Bot extends Table.Crons.TableGameBot {
                 lastActionTime: Date.now(),
                 multiplierMode,
             });
+
+            const rate = this.botRate;
+            const baseAmount = roundMultiplier(betAmount, rate);
+            const recentBigWinningWinner = await this.bigWinConsumer.add(user, {
+                roundId: this.gameData.roundId,
+                amount: betAmount,
+                baseAmount,
+                rate,
+            });
+
+            this.recentBigWinPublisher.publish(recentBigWinningWinner);
 
             if (multiplier === 0) {
                 await this.handleCashout(botId);
@@ -196,11 +206,9 @@ export default class Bot extends Table.Crons.TableGameBot {
     async handleCashout(botId) {
         const botState = this.activeBots.get(botId);
 
-        let recentBigWinningWinner = {};
         const multiplier = botState.multiplier;
         const rate = this.botRate;
         const amount = botState.amount;
-        const baseAmount = roundMultiplier(amount, rate);
         const winningAmount = roundMultiplier(multiplier, amount);
         const baseWinningAmount = roundMultiplier(winningAmount, rate);
 
@@ -210,22 +218,14 @@ export default class Bot extends Table.Crons.TableGameBot {
             this.gameData.players[botId].red = user.red;
             user.profile = { name: user.name };
         }
-        if (isBigWin(multiplier)) {
-            recentBigWinningWinner = await this.bigWinConsumer.add(user, {
-                roundId: this.gameData.roundId,
-                amount,
-                baseAmount,
-                winningAmount,
-                baseWinningAmount,
-                multiplier,
-                rate,
-            });
-            this.recentBigWinPublisher.publish(recentBigWinningWinner);
-        }
 
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            winners: { playerId: botId, bet: winningAmount, rate, reachMaxWin: false, win: winningAmount > 0 },
+        const recentBigWinningWinner = await this.bigWinConsumer.updateBigWin({
+            roundId: this.gameData.roundId,
+            winningAmount,
+            baseWinningAmount,
+            multiplier,
         });
+        this.recentBigWinPublisher.publish(recentBigWinningWinner);
 
         this.activeBots.delete(botId);
     }

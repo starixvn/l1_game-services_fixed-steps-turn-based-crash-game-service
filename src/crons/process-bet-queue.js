@@ -3,7 +3,8 @@ import { helpers } from "sc-common";
 import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
-import { MineConsumer, ProvablyFairConsumer, SettleCashOutConsumer } from "../consumers";
+import { BigWinConsumer, MineConsumer, ProvablyFairConsumer, SettleCashOutConsumer } from "../consumers";
+import { RecentBigWinPublisher } from "../event-publishers";
 import { roundMultiplier } from "../helpers/number-helper";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
@@ -12,7 +13,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
      * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {MineConsumer} dependencies.mineConsumer
-     *
+     * @param {BigWinConsumer} dependencies.bigWinConsumer
+     * @param {RecentBigWinPublisher} dependencies.recentBigWinPublisher
      * */
     constructor({
         definition,
@@ -29,6 +31,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         roundResultConsumer,
         roundsRepository,
         mineConsumer,
+        bigWinConsumer,
+        recentBigWinPublisher,
     }) {
         super({
             definition,
@@ -47,6 +51,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.roundResultConsumer = roundResultConsumer;
         this.roundsRepository = roundsRepository;
         this.mineConsumer = mineConsumer;
+        this.bigWinConsumer = bigWinConsumer;
+        this.recentBigWinPublisher = recentBigWinPublisher;
     }
 
     dequeueBets() {
@@ -122,6 +128,17 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.gameData.ingame[playerName].activeBet = { ...bet, currentMultiplier, tapCount: 1, maxWin: this.getMaxWinPerRound(player) };
 
         this.notifyPlacingBetResult(player, balance, bet, rate, roundId);
+
+        if (bet.action === Actions.Bet) {
+            const baseAmount = roundMultiplier(bet.amount, rate);
+            const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
+                roundId,
+                amount: bet.amount,
+                baseAmount,
+                rate,
+            });
+            this.recentBigWinPublisher.publish(recentBigWinningWinner);
+        }
 
         this.gameData.addPlayerToBetList(player.UID, {
             name: playerName,

@@ -1,6 +1,6 @@
 import { Core } from "sc-game-base";
-import { BigWinConsumer } from "../consumers";
 import { Systems } from "sc-game-base/src/constants";
+import { BigWinConsumer } from "../consumers";
 
 export default class RecentBigWinPublisher extends Core.BaseEventPublishers.BaseEventPublisher {
     /**
