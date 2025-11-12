@@ -1,7 +1,7 @@
 import { Actions } from "../../constants";
-import { calculateIncrement, generateTapResult } from "../../helpers/crash-point-helper";
+import { generateTapResult, getNextMultiplier } from "../../helpers/crash-point-helper";
 import noticeHelper from "../../helpers/notice-helper";
-import { roundFloat } from "../../helpers/number-helper";
+import { roundMultiplier } from "../../helpers/number-helper";
 import { MineConsumer } from "../mine-consumer";
 import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
 
@@ -122,9 +122,9 @@ describe("MineConsumer", () => {
 
         // Reset mocks
         jest.clearAllMocks();
-        calculateIncrement.mockReturnValue(0.1);
+        getNextMultiplier.mockReturnValue(1.6);
         generateTapResult.mockReturnValue(true);
-        roundFloat.mockImplementation((value) => Math.round(value * 100) / 100);
+        roundMultiplier.mockImplementation((a, b) => Math.round(a * b * 100) / 100);
     });
 
     describe("constructor", () => {
@@ -237,16 +237,16 @@ describe("MineConsumer", () => {
             const clientSendTime = Date.now();
             const insertMineBetLogSpy = jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
+            getNextMultiplier.mockReturnValue(1.6);
+            roundMultiplier.mockReturnValue(160);
 
             // Act
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime });
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
-            expect(roundFloat).toHaveBeenCalledWith(1.6);
+            expect(getNextMultiplier).toHaveBeenCalledWith(1.5, mockGameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
             expect(insertMineBetLogSpy).toHaveBeenCalledWith(mockPlayer, mockActiveBet, {
                 clientSendTime,
-                increment: 0.1,
                 result: 2.0,
                 updatedMultiplier: 1.6,
             });
@@ -263,6 +263,8 @@ describe("MineConsumer", () => {
             mockGameData.provablyFair.testPlayer.finalResult = 1.0;
             const insertMineBetLogSpy = jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             const updatePlayerGameStateSpy = jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
+            getNextMultiplier.mockReturnValue(1.6);
+            roundMultiplier.mockReturnValue(0);
 
             // Act
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
@@ -298,7 +300,8 @@ describe("MineConsumer", () => {
         it("should call settleCashOutConsumer when multiplier is 0", async () => {
             // Arrange
             mockGameData.provablyFair.testPlayer.finalResult = 1.0;
-            roundFloat.mockReturnValue(0); // Force multiplier to be 0
+            getNextMultiplier.mockReturnValue(1.6);
+            roundMultiplier.mockReturnValue(0);
             jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
@@ -312,7 +315,8 @@ describe("MineConsumer", () => {
         it("should call settleCashOutConsumer when reaching max multiplier through progression", async () => {
             // Arrange
             mockGameData.ingame.testPlayer.activeBet.currentMultiplier = 1.9; // One step below max
-            roundFloat.mockImplementation((value) => 2.0); // Return max multiplier
+            getNextMultiplier.mockReturnValue(2.0); // Return max multiplier
+            roundMultiplier.mockReturnValue(200);
             jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
@@ -326,7 +330,8 @@ describe("MineConsumer", () => {
         it("should calculate win amount correctly", async () => {
             // Arrange
             mockGameData.provablyFair.testPlayer.finalResult = 3.0; // Set high final result
-            roundFloat.mockImplementation((value) => 1.6); // Override to return 1.6
+            getNextMultiplier.mockReturnValue(1.6);
+            roundMultiplier.mockReturnValue(160);
             jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
@@ -345,7 +350,8 @@ describe("MineConsumer", () => {
             // Arrange
             const activeBetWithLowMaxWin = { ...mockActiveBet, maxWin: 150 };
             mockGameData.provablyFair.testPlayer.finalResult = 3.0; // Set high final result
-            roundFloat.mockImplementation((value) => 1.6); // Override to return 1.6
+            getNextMultiplier.mockReturnValue(1.6);
+            roundMultiplier.mockReturnValue(160);
             jest.spyOn(consumer, "insertMineBetLog").mockResolvedValue();
             jest.spyOn(consumer, "updatePlayerGameState").mockImplementation();
 
@@ -365,14 +371,13 @@ describe("MineConsumer", () => {
         it("should create bet log with all required fields", async () => {
             // Arrange
             const clientSendTime = Date.now();
-            const increment = 0.1;
             const result = 2.0;
             const updatedMultiplier = 1.6;
+            roundMultiplier.mockReturnValueOnce(160); // winAmount
 
             // Act
             await consumer.insertMineBetLog(mockPlayer, mockActiveBet, {
                 clientSendTime,
-                increment,
                 result,
                 updatedMultiplier,
             });
@@ -388,7 +393,6 @@ describe("MineConsumer", () => {
                 clientSendTime,
                 receivedTime: expect.any(Date),
                 freeBet: false,
-                increment: 0.1,
                 result: true,
                 multiplier: 1.6,
                 roundId: "round-123",
@@ -407,11 +411,11 @@ describe("MineConsumer", () => {
             // Arrange
             const playerWithoutSession = { ...mockPlayer, session: null };
             const clientSendTime = Date.now();
+            roundMultiplier.mockReturnValue(160);
 
             // Act
             await consumer.insertMineBetLog(playerWithoutSession, mockActiveBet, {
                 clientSendTime,
-                increment: 0.1,
                 result: 2.0,
                 updatedMultiplier: 1.6,
             });

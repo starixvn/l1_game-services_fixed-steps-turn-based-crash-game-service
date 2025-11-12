@@ -10,7 +10,6 @@ const Schema = new mongoose.Schema({
     multiplier: { type: Number, default: 0 },
     receivedTime: { type: Date, required: true },
     reachMaxWin: { type: Boolean, default: false },
-    increment: { type: Number, default: 0 },
     result: { type: Boolean, default: false },
     isAutoCashOut: { type: Boolean, default: false },
 

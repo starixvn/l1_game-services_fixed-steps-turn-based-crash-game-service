@@ -1,8 +1,8 @@
 import { PlaceBetConsumer } from "sc-game-base/src/core/event-consumers";
 import { Actions } from "../constants";
-import { calculateIncrement, generateTapResult } from "../helpers/crash-point-helper";
+import { generateTapResult, getNextMultiplier } from "../helpers/crash-point-helper";
 import noticeHelper from "../helpers/notice-helper";
-import { roundFloat } from "../helpers/number-helper";
+import { roundMultiplier } from "../helpers/number-helper";
 import { SettleCashOutConsumer } from "./settle-cash-out-consumer";
 
 export class MineConsumer extends PlaceBetConsumer {
@@ -73,8 +73,7 @@ export class MineConsumer extends PlaceBetConsumer {
         const multiplier = ingameData.activeBet.currentMultiplier;
         const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
         const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
-        const increment = calculateIncrement(multiplier, currentMultiplierConfig);
-        let updatedMultiplier = 0;
+        let updatedMultiplier = getNextMultiplier(multiplier, currentMultiplierConfig);
         const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
         if (multiplier === maxMultiplier) {
@@ -83,7 +82,6 @@ export class MineConsumer extends PlaceBetConsumer {
         }
 
         if (multiplier < maxMultiplier) {
-            updatedMultiplier = roundFloat(multiplier + increment);
             updatedMultiplier = updatedMultiplier > provablyFair.finalResult ? 0 : updatedMultiplier;
         }
 
@@ -93,16 +91,17 @@ export class MineConsumer extends PlaceBetConsumer {
 
         await this.insertMineBetLog(player, activeBet, {
             clientSendTime: payload.clientSendTime,
-            increment,
             result,
             updatedMultiplier,
         });
 
+        const roundWinAmount = roundMultiplier(updatedMultiplier, activeBet.amount);
+
         this.updatePlayerGameState(playerName, updatedMultiplier);
         this.publisher.publishMineResult(player.UID, {
             multiplier: updatedMultiplier,
-            winAmount: Math.min(updatedMultiplier * activeBet.amount, activeBet.maxWin),
-            reachMaxWin: updatedMultiplier * activeBet.amount >= activeBet.maxWin,
+            winAmount: Math.min(roundWinAmount, activeBet.maxWin),
+            reachMaxWin: roundWinAmount >= activeBet.maxWin,
         });
 
         if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
@@ -110,18 +109,17 @@ export class MineConsumer extends PlaceBetConsumer {
         }
     }
 
-    async insertMineBetLog(player, activeBet, { clientSendTime, increment, result, updatedMultiplier }) {
+    async insertMineBetLog(player, activeBet, { clientSendTime, result, updatedMultiplier }) {
         const newBetLog = {
             uid: player.UID,
             name: player.profile.name,
             time: new Date(),
             action: Actions.Mine,
             amount: activeBet.amount,
-            winAmount: activeBet.amount * updatedMultiplier,
+            winAmount: roundMultiplier(activeBet.amount, updatedMultiplier),
             clientSendTime: clientSendTime,
             receivedTime: new Date(),
             freeBet: false,
-            increment,
             result: generateTapResult(result),
             multiplier: updatedMultiplier,
             roundId: activeBet.roundId,

@@ -4,6 +4,7 @@ import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
 import { MineConsumer, ProvablyFairConsumer, SettleCashOutConsumer } from "../consumers";
+import { roundMultiplier } from "../helpers/number-helper";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
      * @param {Object} dependencies
@@ -107,8 +108,10 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const rate = this.calculateCurrencyRate(player.session);
         const playerName = player.profile.name;
         this.provablyFairConsumer.generateCrashPoint(playerName, bet.clientSeed, roundId);
-        
-        const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find((config) => config.mode === bet.multiplierMode);
+
+        const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find(
+            (config) => config.mode === bet.multiplierMode
+        );
         const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
         const currentMultiplier = this.gameData.provablyFair[playerName].finalResult > firstMultiplier ? firstMultiplier : 0;
 
@@ -142,7 +145,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
 
         result.multiplier = this.gameData.ingame[playerName].activeBet.currentMultiplier;
         result.ownChip = { amount };
-        result.winAmount = amount * result.multiplier;
+        result.winAmount = roundMultiplier(amount, result.multiplier);
         result.user.name = playerName;
         return result;
     }
@@ -156,9 +159,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             time: new Date(),
             action: bet.action,
             amount: bet.amount,
-            winAmount: bet.amount * currentMultiplier,
+            winAmount: roundMultiplier(bet.amount, currentMultiplier),
             freeBet: bet.freeBet,
-            increment: bet.increment,
             result: bet.result,
             multiplier: currentMultiplier,
             clientSendTime: bet.clientSendTime,
@@ -244,6 +246,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const maxBet = Math.min(player.profile.maxBet, settings.maxBet);
 
-        return maxWinPerRound * maxBet;
+        return roundMultiplier(maxWinPerRound, maxBet);
     }
 }

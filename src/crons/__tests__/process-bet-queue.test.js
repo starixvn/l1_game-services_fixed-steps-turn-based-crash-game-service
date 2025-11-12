@@ -16,7 +16,7 @@ import ProcessBetQueue from "../process-bet-queue";
 const chance = new Chance();
 
 jest.mock("../../helpers/crash-point-helper", () => ({
-    calculateIncrement: jest.fn(),
+    getNextMultiplier: jest.fn(),
 }));
 
 describe("ProcessBetQueue", () => {
@@ -562,7 +562,6 @@ describe("ProcessBetQueue", () => {
                     amount: bet.amount,
                     winAmount: 250,
                     freeBet: bet.freeBet,
-                    increment: bet.increment,
                     result: bet.result,
                     multiplier: currentMultiplier,
                     clientSendTime: bet.clientSendTime,

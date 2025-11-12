@@ -9,10 +9,10 @@ import Bot from "../bot";
 
 jest.mock("sc-game-base/src/core/event-publishers/base-event-publisher");
 jest.mock("../../helpers/crash-point-helper", () => ({
-    calculateIncrement: jest.fn(),
+    getNextMultiplier: jest.fn(),
 }));
 jest.mock("../../helpers/number-helper", () => ({
-    roundFloat: jest.fn(),
+    roundMultiplier: jest.fn(),
 }));
 jest.mock("../../helpers/result-helper", () => ({
     isBigWin: jest.fn(),
@@ -537,7 +537,7 @@ describe("GameBots", () => {
     });
 
     describe("handleMining method", () => {
-        it("should calculate increment and update multiplier", async () => {
+        it("should get next multiplier and update bot state", async () => {
             // Arrange
             const bot = initBot();
             bot.gameData.gameConfigs = {
@@ -557,17 +557,14 @@ describe("GameBots", () => {
                 lastActionTime: Date.now(),
                 multiplierMode: 1,
             });
-            const { calculateIncrement } = require("../../helpers/crash-point-helper");
-            const { roundFloat } = require("../../helpers/number-helper");
-            calculateIncrement.mockReturnValue(0.1);
-            roundFloat.mockReturnValue(1.6);
+            const { getNextMultiplier } = require("../../helpers/crash-point-helper");
+            getNextMultiplier.mockReturnValue(1.6);
 
             // Act
             await bot.handleMining("bot1");
 
             // Assert
-            expect(calculateIncrement).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
-            expect(roundFloat).toHaveBeenCalledWith(1.6);
+            expect(getNextMultiplier).toHaveBeenCalledWith(1.5, bot.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs[0]);
         });
 
         it("should set multiplier to 0 when exceeding result", async () => {
@@ -591,10 +588,8 @@ describe("GameBots", () => {
                 multiplierMode: 1,
             };
             bot.activeBots.set("bot1", botState);
-            const { calculateIncrement } = require("../../helpers/crash-point-helper");
-            const { roundFloat } = require("../../helpers/number-helper");
-            calculateIncrement.mockReturnValue(0.1);
-            roundFloat.mockReturnValue(3.5);
+            const { getNextMultiplier } = require("../../helpers/crash-point-helper");
+            getNextMultiplier.mockReturnValue(3.5);
 
             // Act
             await bot.handleMining("bot1");
@@ -623,10 +618,8 @@ describe("GameBots", () => {
                 lastActionTime: Date.now(),
                 multiplierMode: 1,
             });
-            const { calculateIncrement } = require("../../helpers/crash-point-helper");
-            const { roundFloat } = require("../../helpers/number-helper");
-            calculateIncrement.mockReturnValue(0.1);
-            roundFloat.mockReturnValue(1.6);
+            const { getNextMultiplier } = require("../../helpers/crash-point-helper");
+            getNextMultiplier.mockReturnValue(1.6);
 
             // Act
             await bot.handleMining("bot1");
@@ -658,10 +651,8 @@ describe("GameBots", () => {
                 lastActionTime: Date.now(),
                 multiplierMode: 1,
             });
-            const { calculateIncrement } = require("../../helpers/crash-point-helper");
-            const { roundFloat } = require("../../helpers/number-helper");
-            calculateIncrement.mockReturnValue(0.1);
-            roundFloat.mockReturnValue(1.6);
+            const { getNextMultiplier } = require("../../helpers/crash-point-helper");
+            getNextMultiplier.mockReturnValue(1.6);
 
             // Act
             await bot.handleMining("bot1");
@@ -690,10 +681,8 @@ describe("GameBots", () => {
                 lastActionTime: Date.now(),
                 multiplierMode: 1,
             });
-            const { calculateIncrement } = require("../../helpers/crash-point-helper");
-            const { roundFloat } = require("../../helpers/number-helper");
-            calculateIncrement.mockReturnValue(0.1);
-            roundFloat.mockReturnValue(0);
+            const { getNextMultiplier } = require("../../helpers/crash-point-helper");
+            getNextMultiplier.mockReturnValue(0);
             bot.handleCashout = jest.fn();
 
             // Act
@@ -716,6 +705,11 @@ describe("GameBots", () => {
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
             const { isBigWin } = require("../../helpers/result-helper");
             isBigWin.mockReturnValue(false);
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier
+                .mockImplementationOnce((amount, rate) => 100)      // baseAmount
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");

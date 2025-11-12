@@ -7,8 +7,8 @@ import * as util from "util";
 import { Actions } from "../constants";
 import { BigWinConsumer } from "../consumers";
 import { RecentBigWinPublisher } from "../event-publishers";
-import { calculateIncrement } from "../helpers/crash-point-helper";
-import { roundFloat } from "../helpers/number-helper";
+import { getNextMultiplier } from "../helpers/crash-point-helper";
+import { roundMultiplier } from "../helpers/number-helper";
 import { isBigWin } from "../helpers/result-helper";
 
 export default class Bot extends Table.Crons.TableGameBot {
@@ -175,8 +175,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         const botState = this.activeBots.get(botId);
         const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
         const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === botState.multiplierMode);
-        const increment = calculateIncrement(botState.multiplier, currentMultiplierConfig);
-        let updatedMultiplier = roundFloat(botState.multiplier + increment);
+        let updatedMultiplier = getNextMultiplier(botState.multiplier, currentMultiplierConfig);
         updatedMultiplier = updatedMultiplier > 1000 || updatedMultiplier > botState.result ? 0 : updatedMultiplier;
         botState.hasMined = true;
         botState.lastActionTime = Date.now();
@@ -201,9 +200,9 @@ export default class Bot extends Table.Crons.TableGameBot {
         const multiplier = botState.multiplier;
         const rate = this.botRate;
         const amount = botState.amount;
-        const baseAmount = amount * rate;
-        const winningAmount = multiplier * amount;
-        const baseWinningAmount = winningAmount * rate;
+        const baseAmount = roundMultiplier(amount, rate);
+        const winningAmount = roundMultiplier(multiplier, amount);
+        const baseWinningAmount = roundMultiplier(winningAmount, rate);
 
         const user = await this.userInfosRepository.findOneAndUpdate({ id: botId }, { $inc: { red: +winningAmount } });
 

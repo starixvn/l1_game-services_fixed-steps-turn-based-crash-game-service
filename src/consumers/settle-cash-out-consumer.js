@@ -3,6 +3,7 @@ import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../constants";
 import { RecentBigWinPublisher } from "../event-publishers";
 import helpers from "../helpers/notice-helper";
+import { roundMultiplier } from "../helpers/number-helper";
 import { isBigWin } from "../helpers/result-helper";
 import BigWinConsumer from "./big-win-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
@@ -58,8 +59,8 @@ export class SettleCashOutConsumer {
 
         if (isBigWin(multiplier)) {
             const rate = this.calculateCurrencyRate(player.session);
-            const baseAmount = amount * rate;
-            const baseWinningAmount = winningAmount * rate;
+            const baseAmount = roundMultiplier(amount, rate);
+            const baseWinningAmount = roundMultiplier(winningAmount, rate);
             const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
                 roundId,
                 amount,
@@ -123,7 +124,7 @@ export class SettleCashOutConsumer {
             receivedTime: bet.receivedTime ?? new Date(),
             roundId,
             multiplier: bet.multiplier,
-            winAmount: bet.amount * bet.multiplier,
+            winAmount: roundMultiplier(bet.amount, bet.multiplier),
             tapCount: bet.tapCount,
             isAutoCashOut: bet.isAutoCashOut,
             multiplierMode: bet.multiplierMode,
