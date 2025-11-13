@@ -1,7 +1,6 @@
 import { EventConsumers } from "sc-game-base/src/table";
 import { Actions } from "../constants";
 import { decrypt } from "../helpers/crypto-helper";
-import { roundMultiplier, roundSubtract } from "../helpers/number-helper";
 import { ProvablyFairConsumer } from "./provably-fair-consumer";
 export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRoundConsumer {
     /**
@@ -58,9 +57,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
                 return 0;
             }
 
-            const multiplier = this.getMultiplier(cashOutLog);
-            const roundWinAmount = roundMultiplier(round.amount, multiplier);
-            const winAmount = Math.min(roundWinAmount, round.maxWin);
+            const winAmount = Math.min(round.amount * this.getMultiplier(cashOutLog), round.maxWin);
 
             const betResult = this.calculateBetResult(round.amount, winAmount);
 
@@ -115,7 +112,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
     }
 
     calculateBetResult(betAmount, winAmount) {
-        const winLoss = roundSubtract(winAmount, betAmount);
+        const winLoss = winAmount - betAmount;
 
         return {
             totalBetAmount: +betAmount.toFixed(2),

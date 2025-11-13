@@ -11,9 +11,6 @@ jest.mock("sc-game-base/src/core/event-publishers/base-event-publisher");
 jest.mock("../../helpers/crash-point-helper", () => ({
     getNextMultiplier: jest.fn(),
 }));
-jest.mock("../../helpers/number-helper", () => ({
-    roundMultiplier: jest.fn(),
-}));
 jest.mock("../../consumers", () => ({
     RecentBetConsumer: jest.fn(),
 }));
@@ -708,17 +705,12 @@ describe("GameBots", () => {
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount = roundMultiplier(2.5, 100)
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount = roundMultiplier(250, 1.0)
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
-            expect(roundMultiplier).toHaveBeenCalledWith(2.5, 100);
-            expect(userInfosRepository.findOneAndUpdate).toHaveBeenCalledWith({ id: "bot1" }, { $inc: { red: 250 } });
+            expect(userInfosRepository.findOneAndUpdate).toHaveBeenCalledWith({ id: "bot1" }, { $inc: { red: 250 } }); // 2.5 * 100
         });
 
         it("should update player balance in gameData", async () => {
@@ -740,10 +732,6 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.gameData.players["bot1"] = { red: 500 };
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
@@ -771,10 +759,6 @@ describe("GameBots", () => {
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
@@ -782,8 +766,8 @@ describe("GameBots", () => {
             // Assert
             expect(bot.recentBetConsumer.update).toHaveBeenCalledWith({
                 roundId: 1,
-                winningAmount: 250,
-                baseWinningAmount: 250,
+                winningAmount: 250, // 2.5 * 100
+                baseWinningAmount: 250, // 250 * 1.0
                 multiplier: 2.5,
             });
             expect(bot.recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
@@ -808,10 +792,6 @@ describe("GameBots", () => {
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
@@ -838,10 +818,6 @@ describe("GameBots", () => {
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");

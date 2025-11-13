@@ -5,7 +5,6 @@ import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
 import { MineConsumer, ProvablyFairConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
 import { RecentBetPublisher } from "../event-publishers";
-import { roundMultiplier } from "../helpers/number-helper";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
      * @param {Object} dependencies
@@ -130,7 +129,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.notifyPlacingBetResult(player, balance, bet, rate, roundId);
 
         if (bet.action === Actions.Bet) {
-            const baseAmount = roundMultiplier(bet.amount, rate);
+            const baseAmount = bet.amount * rate;
             const recentBet = await this.recentBetConsumer.add(player, {
                 roundId,
                 amount: bet.amount,
@@ -162,7 +161,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
 
         result.multiplier = this.gameData.ingame[playerName].activeBet.currentMultiplier;
         result.ownChip = { amount };
-        result.winAmount = roundMultiplier(amount, result.multiplier);
+        result.winAmount = amount * result.multiplier;
         result.user.name = playerName;
         return result;
     }
@@ -176,7 +175,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             time: new Date(),
             action: bet.action,
             amount: bet.amount,
-            winAmount: roundMultiplier(bet.amount, currentMultiplier),
+            winAmount: bet.amount * currentMultiplier,
             freeBet: bet.freeBet,
             result: bet.result,
             multiplier: currentMultiplier,
@@ -263,6 +262,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === player.session.currencyGroupId);
         const maxBet = Math.min(player.profile.maxBet, settings.maxBet);
 
-        return roundMultiplier(maxWinPerRound, maxBet);
+        return maxWinPerRound * maxBet;
     }
 }

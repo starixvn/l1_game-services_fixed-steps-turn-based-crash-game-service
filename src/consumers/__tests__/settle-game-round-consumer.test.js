@@ -13,11 +13,6 @@ jest.mock("../../helpers/crypto-helper", () => ({
     decrypt: jest.fn(),
 }));
 
-jest.mock("../../helpers/number-helper", () => ({
-    roundMultiplier: jest.fn(),
-    roundSubtract: jest.fn(),
-}));
-
 describe("SettleGameRoundConsumer", () => {
     const chance = new Chance();
     const defaultDefinition = new GameDefinition({ id: 1, name: "game name" }, jest.fn(), jest.fn());
@@ -82,11 +77,6 @@ describe("SettleGameRoundConsumer", () => {
     });
 
     describe("calculateBetResult", () => {
-        const { roundSubtract } = require("../../helpers/number-helper");
-
-        beforeEach(() => {
-            roundSubtract.mockImplementation((a, b) => +(a - b).toFixed(2));
-        });
 
         describe("when calculating total bet amount", () => {
             it("should return bet amount with 2 decimal places", () => {
@@ -107,21 +97,18 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 100;
                 const winAmount = 150;
-                roundSubtract.mockReturnValue(50);
 
                 // Act
                 const { netWin } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
-                expect(roundSubtract).toHaveBeenCalledWith(winAmount, betAmount);
-                expect(netWin).toBe(50);
+                expect(netWin).toBe(50); // (150 - 100).toFixed(2)
             });
 
             it("should set totalLost to 0", () => {
                 // Arrange
                 const betAmount = 100;
                 const winAmount = 150;
-                roundSubtract.mockReturnValue(50);
 
                 // Act
                 const { totalLost } = consumer.calculateBetResult(betAmount, winAmount);
@@ -136,7 +123,6 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 150;
                 const winAmount = 100;
-                roundSubtract.mockReturnValue(-50);
 
                 // Act
                 const { netWin } = consumer.calculateBetResult(betAmount, winAmount);
@@ -149,13 +135,12 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 150;
                 const winAmount = 100;
-                roundSubtract.mockReturnValue(-50);
 
                 // Act
                 const { totalLost } = consumer.calculateBetResult(betAmount, winAmount);
 
                 // Assert
-                expect(totalLost).toBe(50);
+                expect(totalLost).toBe(50); // (150 - 100).toFixed(2)
             });
         });
 
@@ -164,7 +149,6 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = chance.natural();
                 const winAmount = betAmount;
-                roundSubtract.mockReturnValue(0);
 
                 // Act
                 const result = consumer.calculateBetResult(betAmount, winAmount);
@@ -180,7 +164,6 @@ describe("SettleGameRoundConsumer", () => {
                 // Arrange
                 const betAmount = 100.123;
                 const winAmount = 150.456;
-                roundSubtract.mockReturnValue(50.33);
 
                 // Act
                 const result = consumer.calculateBetResult(betAmount, winAmount);
@@ -188,7 +171,7 @@ describe("SettleGameRoundConsumer", () => {
                 // Assert
                 expect(result.totalBetAmount).toBe(+betAmount.toFixed(2));
                 expect(result.totalWin).toBe(+winAmount.toFixed(2));
-                expect(result.netWin).toBe(50.33);
+                expect(result.netWin).toBe(+(winAmount - betAmount).toFixed(2));
                 expect(result.totalLost).toBe(0);
             });
         });
@@ -320,7 +303,6 @@ describe("SettleGameRoundConsumer", () => {
                 // Setup mocks for valid round scenario
                 consumer.queryRound.mockResolvedValue(mockRound);
                 consumer.queryBetLogs.mockResolvedValue(mockBetLogs);
-                roundMultiplier.mockReturnValue(102);
 
                 consumer.resultsRepository = {
                     findOne: () => {
@@ -386,14 +368,12 @@ describe("SettleGameRoundConsumer", () => {
 
             it("should call endGame with correct parameters", async () => {
                 // Arrange
-                const { roundSubtract } = require("../../helpers/number-helper");
                 const betResult = {
                     totalBetAmount: 100,
                     totalWin: 102,
-                    netWin: 2,
+                    netWin: 2, // (102 - 100).toFixed(2)
                     totalLost: 0,
                 };
-                roundSubtract.mockReturnValue(2);
                 consumer.calculateBetResult = jest.fn().mockReturnValue(betResult);
 
                 // Act

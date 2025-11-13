@@ -20,10 +20,6 @@ jest.mock("../../helpers/crash-point-helper", () => ({
     getNextMultiplier: jest.fn(),
 }));
 
-jest.mock("../../helpers/number-helper", () => ({
-    roundMultiplier: jest.fn(),
-}));
-
 describe("ProcessBetQueue", () => {
     jest.mock("sc-game-base/src/core/event-publishers");
     const roundId = chance.natural();
@@ -371,8 +367,6 @@ describe("ProcessBetQueue", () => {
             rate = chance.floating({ min: 1 });
 
         beforeEach(() => {
-            const { roundMultiplier } = require("../../helpers/number-helper");
-            roundMultiplier.mockImplementation((a, b) => a * b);
             proceedBetQueue.calculateCurrencyRate = jest.fn().mockReturnValueOnce(rate);
             proceedBetQueue.insertBet = jest.fn();
             proceedBetQueue.insertBetLog = jest.fn();

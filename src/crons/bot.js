@@ -8,7 +8,6 @@ import { Actions } from "../constants";
 import { RecentBetConsumer } from "../consumers";
 import { RecentBetPublisher } from "../event-publishers";
 import { getNextMultiplier } from "../helpers/crash-point-helper";
-import { roundMultiplier } from "../helpers/number-helper";
 
 export default class Bot extends Table.Crons.TableGameBot {
     /**
@@ -99,7 +98,7 @@ export default class Bot extends Table.Crons.TableGameBot {
             });
 
             const rate = this.botRate;
-            const baseAmount = roundMultiplier(betAmount, rate);
+            const baseAmount = betAmount * rate;
             const recentBet = await this.recentBetConsumer.add(user, {
                 roundId: this.gameData.roundId,
                 amount: betAmount,
@@ -209,8 +208,8 @@ export default class Bot extends Table.Crons.TableGameBot {
         const multiplier = botState.multiplier;
         const rate = this.botRate;
         const amount = botState.amount;
-        const winningAmount = roundMultiplier(multiplier, amount);
-        const baseWinningAmount = roundMultiplier(winningAmount, rate);
+        const winningAmount = multiplier * amount;
+        const baseWinningAmount = winningAmount * rate;
 
         const user = await this.userInfosRepository.findOneAndUpdate({ id: botId }, { $inc: { red: +winningAmount } });
 

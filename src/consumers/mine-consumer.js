@@ -2,7 +2,6 @@ import { PlaceBetConsumer } from "sc-game-base/src/core/event-consumers";
 import { Actions } from "../constants";
 import { generateTapResult, getNextMultiplier } from "../helpers/crash-point-helper";
 import noticeHelper from "../helpers/notice-helper";
-import { roundMultiplier } from "../helpers/number-helper";
 import { SettleCashOutConsumer } from "./settle-cash-out-consumer";
 
 export class MineConsumer extends PlaceBetConsumer {
@@ -95,13 +94,11 @@ export class MineConsumer extends PlaceBetConsumer {
             updatedMultiplier,
         });
 
-        const roundWinAmount = roundMultiplier(updatedMultiplier, activeBet.amount);
-
         this.updatePlayerGameState(playerName, updatedMultiplier);
         this.publisher.publishMineResult(player.UID, {
             multiplier: updatedMultiplier,
-            winAmount: Math.min(roundWinAmount, activeBet.maxWin),
-            reachMaxWin: roundWinAmount >= activeBet.maxWin,
+            winAmount: Math.min(updatedMultiplier * activeBet.amount, activeBet.maxWin),
+            reachMaxWin: updatedMultiplier * activeBet.amount >= activeBet.maxWin,
         });
 
         if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
@@ -116,7 +113,7 @@ export class MineConsumer extends PlaceBetConsumer {
             time: new Date(),
             action: Actions.Mine,
             amount: activeBet.amount,
-            winAmount: roundMultiplier(activeBet.amount, updatedMultiplier),
+            winAmount: activeBet.amount * updatedMultiplier,
             clientSendTime: clientSendTime,
             receivedTime: new Date(),
             freeBet: false,

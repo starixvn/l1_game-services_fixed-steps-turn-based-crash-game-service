@@ -7,15 +7,10 @@ import { RecentBetConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } fro
 import { RecentBetPublisher } from "../../event-publishers";
 import GameData from "../../game-data";
 import helpers from "../../helpers/notice-helper";
-import { roundMultiplier } from "../../helpers/number-helper";
 const chance = new Chance();
 
 jest.mock("../../helpers/date-helper", () => ({
     addMillisecond: jest.fn(),
-}));
-
-jest.mock("../../helpers/number-helper", () => ({
-    roundMultiplier: jest.fn(),
 }));
 
 describe("SettleCashOutConsumer", () => {
@@ -116,7 +111,6 @@ describe("SettleCashOutConsumer", () => {
             const mockDate = new Date();
             jest.spyOn(global, "Date").mockReturnValueOnce(mockDate);
             consumer.calculateCurrencyRate.mockReturnValueOnce(rate);
-            roundMultiplier.mockReturnValue(1500);
 
             const bet = { ...payload, isAutoCashOut: true };
             realPlayer.session.operatorId = "operator123";
@@ -125,7 +119,6 @@ describe("SettleCashOutConsumer", () => {
             await consumer.insertBetLog(realPlayer, roundId, bet);
 
             // Assert
-            expect(roundMultiplier).toHaveBeenCalledWith(bet.amount, bet.multiplier);
             expect(betLogsRepository.create).toHaveBeenCalledWith({
                 uid: realPlayer.UID,
                 name: realPlayer.profile.name,
@@ -142,7 +135,7 @@ describe("SettleCashOutConsumer", () => {
                 operatorId: realPlayer.session.operatorId,
                 playerId: realPlayer.session.playerId,
                 tapCount: bet.tapCount,
-                winAmount: 1500,
+                winAmount: 1500, // 1000 * 1.5
                 isAutoCashOut: bet.isAutoCashOut,
                 currencyCode: realPlayer.session.currencyCode,
                 currencyMultiplier: realPlayer.session.multiplier,
@@ -368,14 +361,13 @@ describe("SettleCashOutConsumer", () => {
                     consumer.recentBetPublisher.publish = jest.fn();
                     consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
                     consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
-                    roundMultiplier.mockReturnValue(200);
 
                     const recentBet = {
                         name: realPlayer.profile.name,
                         amount: betDetails.amount,
                         baseAmount: 200,
                         winningAmount: 200,
-                        baseWinningAmount: 200,
+                        baseWinningAmount: 200, // 100 * 1.0 * 2
                         multiplier: betDetails.multiplier,
                         rate: 1.0,
                         time: new Date(),
@@ -391,7 +383,7 @@ describe("SettleCashOutConsumer", () => {
                     expect(consumer.recentBetConsumer.update).toHaveBeenCalledWith({
                         roundId: betDetails.roundId,
                         winningAmount: 100,
-                        baseWinningAmount: 200,
+                        baseWinningAmount: 100, // 100 * 1.0
                         multiplier: betDetails.multiplier,
                     });
                     expect(consumer.recentBetPublisher.publish).toHaveBeenCalledTimes(1);

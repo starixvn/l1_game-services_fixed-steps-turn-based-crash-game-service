@@ -3,7 +3,6 @@ import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../constants";
 import { RecentBetPublisher } from "../event-publishers";
 import helpers from "../helpers/notice-helper";
-import { roundMultiplier } from "../helpers/number-helper";
 import RecentBetConsumer from "./recent-bet-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
 
@@ -57,7 +56,7 @@ export class SettleCashOutConsumer {
         });
 
         const rate = this.calculateCurrencyRate(player.session);
-        const baseWinningAmount = roundMultiplier(winningAmount, rate);
+        const baseWinningAmount = winningAmount * rate;
         const recentBet = await this.recentBetConsumer.update({
             roundId,
             winningAmount,
@@ -117,7 +116,7 @@ export class SettleCashOutConsumer {
             receivedTime: bet.receivedTime ?? new Date(),
             roundId,
             multiplier: bet.multiplier,
-            winAmount: roundMultiplier(bet.amount, bet.multiplier),
+            winAmount: bet.amount * bet.multiplier,
             tapCount: bet.tapCount,
             isAutoCashOut: bet.isAutoCashOut,
             multiplierMode: bet.multiplierMode,
