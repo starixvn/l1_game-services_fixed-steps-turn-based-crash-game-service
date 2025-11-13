@@ -1,7 +1,7 @@
 import PlaceBetPublisher from "./place-bet-publisher";
-import RecentBigWinPublisher from "./recent-big-win-publisher";
+import RecentBetPublisher from "./recent-bet-publisher";
 import RoundResultPublisher from "./round-result-publisher";
 import UserBetResultPublisher from "./user-bet-result-publisher";
 
-export { PlaceBetPublisher, RecentBigWinPublisher, RoundResultPublisher, UserBetResultPublisher };
+export { PlaceBetPublisher, RecentBetPublisher, RoundResultPublisher, UserBetResultPublisher };
 

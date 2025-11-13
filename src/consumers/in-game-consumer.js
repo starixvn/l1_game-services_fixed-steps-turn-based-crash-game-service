@@ -1,18 +1,18 @@
 import { Systems } from "sc-game-base/src/constants/systems";
 import { EventConsumers } from "sc-game-base/src/table";
-import { BigWinConsumer, ProvablyFairConsumer } from "./index";
+import { ProvablyFairConsumer, RecentBetConsumer } from "./index";
 
 export class InGameConsumer extends EventConsumers.TableInGameConsumer {
     /**
      * @param {Object} dependencies
      * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
-     * @param {BigWinConsumer} dependencies.bigWinConsumer
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
      */
 
-    constructor({ definition, gameData, roundQuery, publisher, getBalance, userInfosRepository, provablyFairConsumer, bigWinConsumer }) {
+    constructor({ definition, gameData, roundQuery, publisher, getBalance, userInfosRepository, provablyFairConsumer, recentBetConsumer }) {
         super(definition, gameData, roundQuery, publisher, getBalance, userInfosRepository);
         this.provablyFairConsumer = provablyFairConsumer;
-        this.bigWinConsumer = bigWinConsumer;
+        this.recentBetConsumer = recentBetConsumer;
     }
 
     async consume(realPlayer) {
@@ -53,12 +53,12 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
         await this.getBalance(realPlayer, true);
 
         const user = await this.getUserInfo(realPlayer.UID);
-        const recentBigWinningWinners = await this.bigWinConsumer.getRecentBigWinningWinners(realPlayer);
+        const recentBets = await this.recentBetConsumer.getRecentBets(realPlayer);
         return {
             gameConfigs,
             user,
             players,
-            recentBigWinningWinners,
+            recentBets,
         };
     }
 }

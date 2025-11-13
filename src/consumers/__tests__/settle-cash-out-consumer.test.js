@@ -3,8 +3,8 @@ import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../../constants";
-import { BigWinConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } from "../../consumers";
-import { RecentBigWinPublisher } from "../../event-publishers";
+import { RecentBetConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } from "../../consumers";
+import { RecentBetPublisher } from "../../event-publishers";
 import GameData from "../../game-data";
 import helpers from "../../helpers/notice-helper";
 import { roundMultiplier } from "../../helpers/number-helper";
@@ -33,17 +33,17 @@ describe("SettleCashOutConsumer", () => {
     const betLogsRepository = stubMongoose(mongoose.Model);
 
     /**
-     * @type {BigWinConsumer}
+     * @type {RecentBetConsumer}
      */
-    const bigWinConsumer = stub(BigWinConsumer);
+    const recentBetConsumer = stub(RecentBetConsumer);
     /**
      * @type {SettleGameRoundConsumer}
      */
     const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
     /**
-     * @type {RecentBigWinPublisher}
+     * @type {RecentBetPublisher}
      */
-    const recentBigWinPublisher = stub(RecentBigWinPublisher);
+    const recentBetPublisher = stub(RecentBetPublisher);
     /**
      * @type {SettleCashOutConsumer}
      */
@@ -56,8 +56,8 @@ describe("SettleCashOutConsumer", () => {
             publisher,
             logService,
             betLogsRepository,
-            bigWinConsumer,
-            recentBigWinPublisher,
+            recentBetConsumer,
+            recentBetPublisher,
         });
     });
 
@@ -361,16 +361,16 @@ describe("SettleCashOutConsumer", () => {
                 });
             });
 
-            describe("and has big win", () => {
-                it("should publish recent big win with correct params", async () => {
+            describe("and has recent bet", () => {
+                it("should publish recent bet with correct params", async () => {
                     // Arrange
                     betDetails.multiplier = 2;
-                    consumer.recentBigWinPublisher.publish = jest.fn();
+                    consumer.recentBetPublisher.publish = jest.fn();
                     consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
                     consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
                     roundMultiplier.mockReturnValue(200);
 
-                    const recentBigWinningWinner = {
+                    const recentBet = {
                         name: realPlayer.profile.name,
                         amount: betDetails.amount,
                         baseAmount: 200,
@@ -380,28 +380,37 @@ describe("SettleCashOutConsumer", () => {
                         rate: 1.0,
                         time: new Date(),
                         exchangeRateId: gameData.exchangeRates.exId,
+                        currency: realPlayer.session.currencyName,
                     };
-                    consumer.bigWinConsumer.add = jest.fn().mockReturnValue(recentBigWinningWinner);
+                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue(recentBet);
 
                     // Act
                     await consumer.proceedCashOut(realPlayer);
 
                     // Assert
-                    expect(consumer.recentBigWinPublisher.publish).toHaveBeenCalledTimes(1);
-                    expect(consumer.recentBigWinPublisher.publish).toHaveBeenCalledWith(recentBigWinningWinner);
+                    expect(consumer.recentBetConsumer.update).toHaveBeenCalledWith({
+                        roundId: betDetails.roundId,
+                        winningAmount: 100,
+                        baseWinningAmount: 200,
+                        multiplier: betDetails.multiplier,
+                    });
+                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledTimes(1);
+                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledWith(recentBet);
                 });
             });
 
-            describe("and not has big win", () => {
-                it("should not publish recent big win", async () => {
+            describe("and not has recent bet", () => {
+                it("should not publish recent bet when update returns null", async () => {
                     // Arrange
-                    consumer.recentBigWinPublisher.publish = jest.fn();
+                    consumer.recentBetPublisher.publish = jest.fn();
+                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue(null);
 
                     // Act
                     await consumer.proceedCashOut(realPlayer);
 
                     // Assert
-                    expect(consumer.recentBigWinPublisher.publish).not.toHaveBeenCalled();
+                    expect(consumer.recentBetConsumer.update).toHaveBeenCalled();
+                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledWith(null);
                 });
             });
         });

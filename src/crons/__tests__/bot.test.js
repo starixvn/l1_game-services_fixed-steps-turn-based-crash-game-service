@@ -1,12 +1,12 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
-import { ProvablyFairConsumer } from "sc-game-base/src/core/event-consumers";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { TableGameDefinition } from "sc-game-base/src/table";
+import { RecentBetConsumer } from "../../consumers";
+import { RecentBetPublisher } from "../../event-publishers";
 import CrashGameData from "../../game-data";
 import gameSettings from "../../game-settings";
 import Bot from "../bot";
-
 jest.mock("sc-game-base/src/core/event-publishers/base-event-publisher");
 jest.mock("../../helpers/crash-point-helper", () => ({
     getNextMultiplier: jest.fn(),
@@ -14,24 +14,20 @@ jest.mock("../../helpers/crash-point-helper", () => ({
 jest.mock("../../helpers/number-helper", () => ({
     roundMultiplier: jest.fn(),
 }));
-jest.mock("../../helpers/result-helper", () => ({
-    isBigWin: jest.fn(),
-}));
 jest.mock("../../consumers", () => ({
-    BigWinConsumer: jest.fn(),
+    RecentBetConsumer: jest.fn(),
 }));
 jest.mock("../../event-publishers", () => ({
-    RecentBigWinPublisher: jest.fn(),
+    RecentBetPublisher: jest.fn(),
 }));
 
-const tempBetsRepository = stubMongoose(mongoose.Model);
-const tempBetLogsRepository = stubMongoose(mongoose.Model);
-tempBetLogsRepository.create = jest.fn();
-const provablyFairConsumer = stub(ProvablyFairConsumer);
 const userInfosRepository = stubMongoose(mongoose.Model);
 const publisher = new BaseEventPublisher();
 const definition = new TableGameDefinition(gameSettings);
 let gameData = new CrashGameData();
+const recentBetConsumer = stub(RecentBetConsumer);
+const recentBetPublisher = stub(RecentBetPublisher);
+
 const fixedStepsMultiplierConfigs = [
     {
         mode: 1,
@@ -58,7 +54,7 @@ gameData.gameConfigs = {
 };
 
 function initBot() {
-    return new Bot(definition, gameData, publisher, userInfosRepository, tempBetsRepository, tempBetLogsRepository, provablyFairConsumer);
+    return new Bot(definition, gameData, publisher, userInfosRepository, recentBetConsumer, recentBetPublisher);
 }
 
 afterEach(() => {
@@ -545,8 +541,8 @@ describe("GameBots", () => {
                     fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
-                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-                        }
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+                        },
                     ],
                 },
             };
@@ -575,8 +571,8 @@ describe("GameBots", () => {
                     fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
-                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-                        }
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+                        },
                     ],
                 },
             };
@@ -606,8 +602,8 @@ describe("GameBots", () => {
                     fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
-                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-                        }
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+                        },
                     ],
                 },
             };
@@ -639,8 +635,8 @@ describe("GameBots", () => {
                     fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
-                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-                        }
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+                        },
                     ],
                 },
             };
@@ -669,8 +665,8 @@ describe("GameBots", () => {
                     fixedStepsMultiplierConfigs: [
                         {
                             mode: 1,
-                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
-                        }
+                            multiplierSteps: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+                        },
                     ],
                 },
             };
@@ -697,30 +693,46 @@ describe("GameBots", () => {
         it("should calculate winning amounts", async () => {
             // Arrange
             const bot = initBot();
+            bot.gameData.roundId = 1;
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue({
+                name: "Bot1",
+                amount: 100,
+                multiplier: 2.5,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+            });
+            bot.recentBetPublisher.publish = jest.fn();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { isBigWin } = require("../../helpers/result-helper");
-            isBigWin.mockReturnValue(false);
             const { roundMultiplier } = require("../../helpers/number-helper");
             roundMultiplier
-                .mockImplementationOnce((amount, rate) => 100)      // baseAmount
-                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
-                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount = roundMultiplier(2.5, 100)
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount = roundMultiplier(250, 1.0)
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
+            expect(roundMultiplier).toHaveBeenCalledWith(2.5, 100);
             expect(userInfosRepository.findOneAndUpdate).toHaveBeenCalledWith({ id: "bot1" }, { $inc: { red: 250 } });
         });
 
         it("should update player balance in gameData", async () => {
             // Arrange
             const bot = initBot();
+            bot.gameData.roundId = 1;
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue({
+                name: "Bot1",
+                amount: 100,
+                multiplier: 2.5,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+            });
+            bot.recentBetPublisher.publish = jest.fn();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
@@ -728,8 +740,10 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.gameData.players["bot1"] = { red: 500 };
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { isBigWin } = require("../../helpers/result-helper");
-            isBigWin.mockReturnValue(false);
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
@@ -738,58 +752,96 @@ describe("GameBots", () => {
             expect(bot.gameData.players["bot1"].red).toBe(1000);
         });
 
-        it("should handle big win when multiplier is big win", async () => {
+        it("should call update and publish recent bet", async () => {
             // Arrange
             const bot = initBot();
+            bot.gameData.roundId = 1;
+            const mockRecentBet = {
+                name: "Bot1",
+                amount: 100,
+                multiplier: 2.5,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+            };
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue(mockRecentBet);
+            bot.recentBetPublisher.publish = jest.fn();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { isBigWin } = require("../../helpers/result-helper");
-            isBigWin.mockReturnValue(true);
-            bot.bigWinConsumer = { add: jest.fn().mockResolvedValue({ name: "Bot1", amount: 100 }) };
-            bot.recentBigWinPublisher = { publish: jest.fn() };
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
-            expect(bot.bigWinConsumer.add).toHaveBeenCalled();
-            expect(bot.recentBigWinPublisher.publish).toHaveBeenCalled();
+            expect(bot.recentBetConsumer.update).toHaveBeenCalledWith({
+                roundId: 1,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+                multiplier: 2.5,
+            });
+            expect(bot.recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
         });
 
-        it("should publish winners event", async () => {
+        it("should publish recent bet event", async () => {
             // Arrange
             const bot = initBot();
+            bot.gameData.roundId = 1;
+            const mockRecentBet = {
+                name: "Bot1",
+                amount: 100,
+                multiplier: 2.5,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+            };
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue(mockRecentBet);
+            bot.recentBetPublisher.publish = jest.fn();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { isBigWin } = require("../../helpers/result-helper");
-            isBigWin.mockReturnValue(false);
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
-            expect(bot.publisher.publishToAllUsersExceptSystem).toHaveBeenCalled();
+            expect(bot.recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
         });
 
         it("should remove bot from activeBots", async () => {
             // Arrange
             const bot = initBot();
+            bot.gameData.roundId = 1;
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue({
+                name: "Bot1",
+                amount: 100,
+                multiplier: 2.5,
+                winningAmount: 250,
+                baseWinningAmount: 250,
+            });
+            bot.recentBetPublisher.publish = jest.fn();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
-            const { isBigWin } = require("../../helpers/result-helper");
-            isBigWin.mockReturnValue(false);
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier
+                .mockImplementationOnce((multiplier, amount) => 250) // winningAmount
+                .mockImplementationOnce((winningAmount, rate) => 250); // baseWinningAmount
 
             // Act
             await bot.handleCashout("bot1");

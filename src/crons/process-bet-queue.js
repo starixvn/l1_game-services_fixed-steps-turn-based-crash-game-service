@@ -3,8 +3,8 @@ import { helpers } from "sc-common";
 import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
-import { BigWinConsumer, MineConsumer, ProvablyFairConsumer, SettleCashOutConsumer } from "../consumers";
-import { RecentBigWinPublisher } from "../event-publishers";
+import { MineConsumer, ProvablyFairConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
+import { RecentBetPublisher } from "../event-publishers";
 import { roundMultiplier } from "../helpers/number-helper";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
@@ -13,8 +13,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
      * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {MineConsumer} dependencies.mineConsumer
-     * @param {BigWinConsumer} dependencies.bigWinConsumer
-     * @param {RecentBigWinPublisher} dependencies.recentBigWinPublisher
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
+     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      * */
     constructor({
         definition,
@@ -31,8 +31,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         roundResultConsumer,
         roundsRepository,
         mineConsumer,
-        bigWinConsumer,
-        recentBigWinPublisher,
+        recentBetConsumer,
+        recentBetPublisher,
     }) {
         super({
             definition,
@@ -51,8 +51,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.roundResultConsumer = roundResultConsumer;
         this.roundsRepository = roundsRepository;
         this.mineConsumer = mineConsumer;
-        this.bigWinConsumer = bigWinConsumer;
-        this.recentBigWinPublisher = recentBigWinPublisher;
+        this.recentBetConsumer = recentBetConsumer;
+        this.recentBetPublisher = recentBetPublisher;
     }
 
     dequeueBets() {
@@ -131,13 +131,13 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
 
         if (bet.action === Actions.Bet) {
             const baseAmount = roundMultiplier(bet.amount, rate);
-            const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
+            const recentBet = await this.recentBetConsumer.add(player, {
                 roundId,
                 amount: bet.amount,
                 baseAmount,
                 rate,
             });
-            this.recentBigWinPublisher.publish(recentBigWinningWinner);
+            this.recentBetPublisher.publish(recentBet);
         }
 
         this.gameData.addPlayerToBetList(player.UID, {

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export default function (gameConfigName) {
-    const bigWinSchema = new mongoose.Schema({
+    const recentBetSchema = new mongoose.Schema({
         uid: { type: String, required: true },
         name: { type: String, required: true },
         roundId: { type: Number, required: true },
@@ -18,5 +18,5 @@ export default function (gameConfigName) {
         operatorId: { type: String, required: false },
         playerId: { type: String },
     });
-    return mongoose.model(`${gameConfigName}_recentbigwins`, bigWinSchema);
+    return mongoose.model(`${gameConfigName}_recentbets`, recentBetSchema);
 }

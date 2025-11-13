@@ -1,27 +1,31 @@
 import Chance from "chance";
 import { Systems } from "sc-game-base/src/constants";
+import { RecentBetConsumer } from "../../consumers";
 import CrashGameData from "../../game-data";
-import RecentBigWinPublisher from "../recent-big-win-publisher";
+import RecentBetPublisher from "../recent-bet-publisher";
 
 const chance = new Chance();
 
-describe("RecentBigWinPublisher", () => {
+describe("RecentBetPublisher", () => {
     /**
-     * @type {RecentBigWinPublisher}
+     * @type {RecentBetPublisher}
      */
     let publisher;
     let gameData;
-    let bigWinConsumer;
+    /**
+     * @type {RecentBetConsumer}
+     */
+    let recentBetConsumer;
     let gameName;
 
     beforeEach(() => {
         gameName = chance.string({ length: 10 });
         gameData = new CrashGameData(10);
-        bigWinConsumer = {
+        recentBetConsumer = {
             updateExchangeRateCode: jest.fn(),
         };
 
-        publisher = new RecentBigWinPublisher(gameName, gameData, bigWinConsumer);
+        publisher = new RecentBetPublisher(gameName, gameData, recentBetConsumer);
     });
 
     afterEach(() => {
@@ -33,12 +37,12 @@ describe("RecentBigWinPublisher", () => {
             // Assert
             expect(publisher.gameName).toBe(gameName);
             expect(publisher.gameData).toBe(gameData);
-            expect(publisher.bigWinConsumer).toBe(bigWinConsumer);
+            expect(publisher.recentBetConsumer).toBe(recentBetConsumer);
         });
     });
 
     describe("publish", () => {
-        const recentBigWinningWinner = {
+        const recentBet = {
             name: chance.name(),
             amount: chance.natural({ min: 100, max: 10000 }),
             multiplier: chance.floating({ min: 2, max: 10 }),
@@ -71,11 +75,11 @@ describe("RecentBigWinPublisher", () => {
 
         it("should filter out Mobi system players", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(4); // player2, player3, player4, player5
-            expect(bigWinConsumer.updateExchangeRateCode).not.toHaveBeenCalledWith(
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(4); // player2, player3, player4, player5
+            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalledWith(
                 expect.objectContaining({ session: { system: Systems.Mobi } }),
                 expect.any(Array)
             );
@@ -83,37 +87,37 @@ describe("RecentBigWinPublisher", () => {
 
         it("should call updateExchangeRateCode for each non-Mobi player", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player2, [recentBigWinningWinner]);
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player3, [recentBigWinningWinner]);
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBigWinningWinner]);
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBigWinningWinner]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player2, [recentBet]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player3, [recentBet]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBet]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBet]);
         });
 
         it("should emit to socket for each non-Mobi player", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
             expect(gameData.realPlayers.player2.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
             expect(gameData.realPlayers.player3.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
             expect(gameData.realPlayers.player4.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
             expect(gameData.realPlayers.player5.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
         });
 
         it("should not emit to Mobi system players", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
             expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
@@ -121,23 +125,23 @@ describe("RecentBigWinPublisher", () => {
 
         it("should handle players with null session", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBigWinningWinner]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBet]);
             expect(gameData.realPlayers.player4.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
         });
 
         it("should handle players with undefined session", () => {
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBigWinningWinner]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBet]);
             expect(gameData.realPlayers.player5.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
         });
 
@@ -146,10 +150,10 @@ describe("RecentBigWinPublisher", () => {
             gameData.realPlayers = {};
 
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
+            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
         });
 
         it("should handle undefined realPlayers", () => {
@@ -157,7 +161,7 @@ describe("RecentBigWinPublisher", () => {
             gameData.realPlayers = undefined;
 
             // Act & Assert
-            expect(() => publisher.publish(recentBigWinningWinner)).toThrow();
+            expect(() => publisher.publish(recentBet)).toThrow();
         });
 
         it("should handle null realPlayers", () => {
@@ -165,7 +169,7 @@ describe("RecentBigWinPublisher", () => {
             gameData.realPlayers = null;
 
             // Act & Assert
-            expect(() => publisher.publish(recentBigWinningWinner)).toThrow();
+            expect(() => publisher.publish(recentBet)).toThrow();
         });
 
         it("should handle players with different system values", () => {
@@ -186,24 +190,24 @@ describe("RecentBigWinPublisher", () => {
             };
 
             // Act
-            publisher.publish(recentBigWinningWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(3);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(3);
             expect(gameData.realPlayers.webPlayer.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
             expect(gameData.realPlayers.mobilePlayer.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
             expect(gameData.realPlayers.apiPlayer.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner,
+                recentBet,
             });
         });
 
-        it("should handle recentBigWinningWinner", () => {
+        it("should handle recentBet", () => {
             // Arrange
-            const bigWinner = {
+            const recentBet = {
                 name: chance.name(),
                 amount: chance.natural({ min: 100, max: 10000 }),
                 multiplier: chance.floating({ min: 2, max: 10 }),
@@ -218,13 +222,64 @@ describe("RecentBigWinPublisher", () => {
             };
 
             // Act
-            publisher.publish(bigWinner);
+            publisher.publish(recentBet);
 
             // Assert
-            expect(bigWinConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player1, [bigWinner]);
+            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player1, [recentBet]);
             expect(gameData.realPlayers.player1.socketClient.emit).toHaveBeenCalledWith(gameName, {
-                recentBigWinningWinner: bigWinner,
+                recentBet,
             });
+        });
+
+        it("should return early when recentBet is null", () => {
+            // Arrange
+            gameData.realPlayers = {
+                player1: {
+                    session: { system: 1 },
+                    socketClient: { emit: jest.fn() },
+                },
+            };
+
+            // Act
+            publisher.publish(null);
+
+            // Assert
+            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
+            expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
+        });
+
+        it("should return early when recentBet is undefined", () => {
+            // Arrange
+            gameData.realPlayers = {
+                player1: {
+                    session: { system: 1 },
+                    socketClient: { emit: jest.fn() },
+                },
+            };
+
+            // Act
+            publisher.publish(undefined);
+
+            // Assert
+            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
+            expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
+        });
+
+        it("should return early when recentBet is falsy", () => {
+            // Arrange
+            gameData.realPlayers = {
+                player1: {
+                    session: { system: 1 },
+                    socketClient: { emit: jest.fn() },
+                },
+            };
+
+            // Act
+            publisher.publish(false);
+
+            // Assert
+            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
+            expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
         });
     });
 });

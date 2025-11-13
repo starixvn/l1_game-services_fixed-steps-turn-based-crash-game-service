@@ -8,7 +8,8 @@ import BaseMetrics from "sc-game-base/src/core/base-metrics";
 import { ProvablyFairConsumer } from "sc-game-base/src/core/event-consumers";
 import { PlaceBetPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../../constants";
-import { MineConsumer, SettleCashOutConsumer } from "../../consumers";
+import { MineConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../../consumers";
+import { RecentBetPublisher } from "../../event-publishers";
 import CrashGameData from "../../game-data";
 import noticeHelper from "../../helpers/notice-helper";
 import ProcessBetQueue from "../process-bet-queue";
@@ -17,6 +18,10 @@ const chance = new Chance();
 
 jest.mock("../../helpers/crash-point-helper", () => ({
     getNextMultiplier: jest.fn(),
+}));
+
+jest.mock("../../helpers/number-helper", () => ({
+    roundMultiplier: jest.fn(),
 }));
 
 describe("ProcessBetQueue", () => {
@@ -72,6 +77,8 @@ describe("ProcessBetQueue", () => {
     const provablyFairConsumer = stub(ProvablyFairConsumer);
     const mineConsumer = stub(MineConsumer);
     const roundResultConsumer = stub();
+    const recentBetConsumer = stub(RecentBetConsumer);
+    const recentBetPublisher = stub(RecentBetPublisher);
     /** @type {logger}*/
     const logService = stub(logger);
     /** @type {mongoose.Model}*/
@@ -156,6 +163,8 @@ describe("ProcessBetQueue", () => {
                 roundResultConsumer,
                 roundsRepository,
                 mineConsumer,
+                recentBetConsumer,
+                recentBetPublisher,
             });
 
             // Assert
@@ -164,6 +173,8 @@ describe("ProcessBetQueue", () => {
             expect(processBetQueue.roundResultConsumer).toBe(roundResultConsumer);
             expect(processBetQueue.roundsRepository).toBe(roundsRepository);
             expect(processBetQueue.mineConsumer).toBe(mineConsumer);
+            expect(processBetQueue.recentBetConsumer).toBe(recentBetConsumer);
+            expect(processBetQueue.recentBetPublisher).toBe(recentBetPublisher);
         });
     });
 
@@ -360,12 +371,21 @@ describe("ProcessBetQueue", () => {
             rate = chance.floating({ min: 1 });
 
         beforeEach(() => {
+            const { roundMultiplier } = require("../../helpers/number-helper");
+            roundMultiplier.mockImplementation((a, b) => a * b);
             proceedBetQueue.calculateCurrencyRate = jest.fn().mockReturnValueOnce(rate);
             proceedBetQueue.insertBet = jest.fn();
             proceedBetQueue.insertBetLog = jest.fn();
             proceedBetQueue.notifyPlacingBetResult = jest.fn();
             proceedBetQueue.updateUserStakeLevel = jest.fn();
             proceedBetQueue.getMaxWinPerRound = jest.fn().mockReturnValue(1000);
+            recentBetConsumer.add = jest.fn().mockResolvedValue({
+                name: player.profile.name,
+                amount: payload.amount,
+                baseAmount: payload.amount * rate,
+                rate,
+            });
+            recentBetPublisher.publish = jest.fn();
             gameData.provablyFair = {
                 [player.profile.name]: {
                     finalResult: 2.5,
@@ -817,6 +837,8 @@ describe("ProcessBetQueue", () => {
             roundResultConsumer,
             roundsRepository,
             mineConsumer,
+            recentBetConsumer,
+            recentBetPublisher,
         });
     };
 

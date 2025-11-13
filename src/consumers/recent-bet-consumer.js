@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 import GameData from "../game-data";
-const MAX_BIG_WINS_RECORDS = 10;
+const MAX_RECENT_BETS_RECORDS = 10;
 
-export default class BigWinConsumer {
+export default class RecentBetConsumer {
     /**
-     * @param {mongoose.Model} bigWinsRepository
+     * @param {mongoose.Model} recentBetsRepository
      * @param {GameData} gameData
      * @param {mongoose.Model} exchangeRatesRepository
      */
-    constructor(bigWinsRepository, gameData, exchangeRatesRepository) {
-        this.bigWinsRepository = bigWinsRepository;
+    constructor(recentBetsRepository, gameData, exchangeRatesRepository) {
+        this.recentBetsRepository = recentBetsRepository;
         this.gameData = gameData;
         this.exchangeRatesRepository = exchangeRatesRepository;
     }
@@ -22,7 +22,7 @@ export default class BigWinConsumer {
      * @param {number} data.rate
      */
     async add(player, { roundId, amount, baseAmount, rate }) {
-        const bigWin = {
+        const recentBet = {
             name: player.profile.name,
             amount,
             baseAmount,
@@ -34,18 +34,18 @@ export default class BigWinConsumer {
         const document = {
             roundId,
             uid: player.UID,
-            ...bigWin,
+            ...recentBet,
         };
 
         if (!!player.session) {
             document.currency = player.session.currencyName;
             document.operatorId = player.session.operatorId;
             document.playerId = player.session.playerId;
-            bigWin.playerId = player.session.playerId;
+            recentBet.playerId = player.session.playerId;
         }
 
-        await this.bigWinsRepository.create(document);
-        return bigWin;
+        await this.recentBetsRepository.create(document);
+        return recentBet;
     }
 
     /**
@@ -55,8 +55,8 @@ export default class BigWinConsumer {
      * @param {number} data.baseWinningAmount
      * @param {number} data.multiplier
      */
-    async updateBigWin({ roundId, winningAmount, baseWinningAmount, multiplier }) {
-        return await this.bigWinsRepository.findOneAndUpdate(
+    async update({ roundId, winningAmount, baseWinningAmount, multiplier }) {
+        return await this.recentBetsRepository.findOneAndUpdate(
             { roundId },
             { $set: { multiplier, winningAmount, baseWinningAmount } },
             { new: true, lean: true, select: "-_id -uid -__v -playerId -operatorId" }
@@ -66,39 +66,39 @@ export default class BigWinConsumer {
      * @param {Object} realPlayer
      * @returns {Object[]}
      */
-    async getRecentBigWinningWinners(realPlayer) {
-        const bigWins = await this.bigWinsRepository
+    async getRecentBets(realPlayer) {
+        const recentBets = await this.recentBetsRepository
             .find({}, { _id: false, uid: false, roundId: false, currency: false, operatorId: false, __v: false })
             .lean()
             .sort({ time: -1 })
-            .limit(MAX_BIG_WINS_RECORDS);
+            .limit(MAX_RECENT_BETS_RECORDS);
 
-        if (bigWins.length === 0) {
+        if (recentBets.length === 0) {
             return [];
         }
-        await this.updateExchangeRateCode(realPlayer, bigWins);
-        return bigWins.reverse();
+        await this.updateExchangeRateCode(realPlayer, recentBets);
+        return recentBets.reverse();
     }
 
     /**
      * @param {Object} realPlayer
-     * @param {Object[]} winners
+     * @param {Object[]} bets
      */
-    async updateExchangeRateCode(realPlayer, winners) {
-        const exchangeRates = await this.getExchangeRates(winners.map((w) => w.exchangeRateId));
+    async updateExchangeRateCode(realPlayer, bets) {
+        const exchangeRates = await this.getExchangeRates(bets.map((bet) => bet.exchangeRateId));
         const { session } = realPlayer;
-        for (const winner of winners) {
-            this.updateBigWinExchangeRateCode(winner, session.currencyCode, exchangeRates);
+        for (const bet of bets) {
+            this.updateRecentBetExchangeRateCode(bet, session.currencyCode, exchangeRates);
         }
     }
 
-    updateBigWinExchangeRateCode(winner, currencyCode, exchangeRates) {
-        const exchangeRate = exchangeRates.find((er) => er.exId === winner.exchangeRateId);
+    updateRecentBetExchangeRateCode(bet, currencyCode, exchangeRates) {
+        const exchangeRate = exchangeRates.find((er) => er.exId === bet.exchangeRateId);
 
         if (!exchangeRate) {
             return;
         }
-        winner.exchangeRateCode = {
+        bet.exchangeRateCode = {
             [currencyCode]: parseFloat(exchangeRate.code[currencyCode]),
         };
     }

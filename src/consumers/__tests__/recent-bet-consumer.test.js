@@ -1,17 +1,20 @@
 import { stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
-import BigWinConsumer from "../big-win-consumer";
+import RecentBetConsumer from "../recent-bet-consumer";
 
-describe("BigWinConsumer", () => {
+describe("RecentBetConsumer", () => {
+     /**
+     * @type {RecentBetConsumer}
+     */
     let consumer;
-    let mockBigWinsRepository;
+    let mockRecentBetsRepository;
     let mockGameData;
     let mockExchangeRatesRepository;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockBigWinsRepository = stubMongoose(mongoose.Model);
+        mockRecentBetsRepository = stubMongoose(mongoose.Model);
         mockExchangeRatesRepository = stubMongoose(mongoose.Model);
         mockGameData = {
             exchangeRates: {
@@ -19,15 +22,15 @@ describe("BigWinConsumer", () => {
             }
         };
 
-        consumer = new BigWinConsumer(
-            mockBigWinsRepository,
+        consumer = new RecentBetConsumer(
+            mockRecentBetsRepository,
             mockGameData,
             mockExchangeRatesRepository
         );
     });
     describe("constructor", () => {
         it("should initialize all dependencies correctly", () => {
-            expect(consumer.bigWinsRepository).toBe(mockBigWinsRepository);
+            expect(consumer.recentBetsRepository).toBe(mockRecentBetsRepository);
             expect(consumer.gameData).toBe(mockGameData);
             expect(consumer.exchangeRatesRepository).toBe(mockExchangeRatesRepository);
         });
@@ -57,10 +60,10 @@ describe("BigWinConsumer", () => {
         };
 
         beforeEach(() => {
-            mockBigWinsRepository.create.mockResolvedValue({});
+            mockRecentBetsRepository.create.mockResolvedValue({});
         });
 
-        it("should create big win with all correct fields", async () => {
+        it("should create recent bet with all correct fields", async () => {
             // Arrange
             const beforeTime = new Date();
 
@@ -68,7 +71,7 @@ describe("BigWinConsumer", () => {
             await consumer.add(mockPlayer, mockData);
 
             // Assert
-            const callArgs = mockBigWinsRepository.create.mock.calls[0][0];
+            const callArgs = mockRecentBetsRepository.create.mock.calls[0][0];
             const afterTime = new Date();
 
             expect(callArgs).toEqual(
@@ -76,9 +79,6 @@ describe("BigWinConsumer", () => {
                     name: "testPlayer",
                     amount: 100,
                     baseAmount: 100,
-                    winningAmount: 500,
-                    baseWinningAmount: 500,
-                    multiplier: 5.0,
                     rate: 0.2,
                     exchangeRateId: "exchange-rate-123",
                     roundId: "round-123",
@@ -95,7 +95,7 @@ describe("BigWinConsumer", () => {
             await consumer.add(mockPlayer, mockData);
 
             // Assert
-            expect(mockBigWinsRepository.create).toHaveBeenCalledWith(
+            expect(mockRecentBetsRepository.create).toHaveBeenCalledWith(
                 expect.objectContaining({
                     currency: "USD",
                     operatorId: "op-456",
@@ -117,13 +117,13 @@ describe("BigWinConsumer", () => {
             await consumer.add(playerWithoutSession, mockData);
 
             // Assert
-            const callArgs = mockBigWinsRepository.create.mock.calls[0][0];
+            const callArgs = mockRecentBetsRepository.create.mock.calls[0][0];
             expect(callArgs).not.toHaveProperty("currency");
             expect(callArgs).not.toHaveProperty("operatorId");
             expect(callArgs).not.toHaveProperty("playerId");
         });
 
-        it("should set playerId in bigWin object when player has session", async () => {
+        it("should set playerId in recent bet object when player has session", async () => {
             // Act
             const result = await consumer.add(mockPlayer, mockData);
 
@@ -131,7 +131,7 @@ describe("BigWinConsumer", () => {
             expect(result.playerId).toBe("player-789");
         });
 
-        it("should not set playerId in bigWin object when player has no session", async () => {
+        it("should not set playerId in recent bet object when player has no session", async () => {
             // Arrange
             const playerWithoutSession = {
                 profile: {
@@ -147,7 +147,7 @@ describe("BigWinConsumer", () => {
             expect(result).not.toHaveProperty("playerId");
         });
 
-        it("should return bigWin object", async () => {
+        it("should return recent bet object", async () => {
             // Act
             const result = await consumer.add(mockPlayer, mockData);
 
@@ -156,9 +156,6 @@ describe("BigWinConsumer", () => {
                 name: "testPlayer",
                 amount: 100,
                 baseAmount: 100,
-                winningAmount: 500,
-                baseWinningAmount: 500,
-                multiplier: 5.0,
                 rate: 0.2,
                 time: expect.any(Date),
                 exchangeRateId: "exchange-rate-123",
@@ -167,14 +164,14 @@ describe("BigWinConsumer", () => {
         });
     });
 
-    describe("getRecentBigWinningWinners", () => {
+    describe("getRecentBets", () => {
         const mockRealPlayer = {
             session: {
                 currencyCode: "USD"
             }
         };
 
-        const mockBigWins = [
+        const mockRecentBets = [
             {
                 name: "player1",
                 amount: 100,
@@ -195,23 +192,23 @@ describe("BigWinConsumer", () => {
         ];
 
         beforeEach(() => {
-            mockBigWinsRepository.find.mockReturnValue({
+            mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
                     sort: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue(mockBigWins)
+                        limit: jest.fn().mockResolvedValue(mockRecentBets)
                     })
                 })
             });
             jest.spyOn(consumer, "getExchangeRates").mockResolvedValue(mockExchangeRates);
-            jest.spyOn(consumer, "updateBigWinExchangeRateCode");
+            jest.spyOn(consumer, "updateRecentBetExchangeRateCode");
         });
 
-        it("should query bigWinsRepository with correct filter", async () => {
+        it("should query recentBetsRepository with correct filter", async () => {
             // Act
-            await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
-            expect(mockBigWinsRepository.find).toHaveBeenCalledWith({}, {
+            expect(mockRecentBetsRepository.find).toHaveBeenCalledWith({}, {
                 _id: false,
                 uid: false,
                 roundId: false,
@@ -223,25 +220,25 @@ describe("BigWinConsumer", () => {
 
         it("should sort by time descending", async () => {
             // Act
-            await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
-            const queryChain = mockBigWinsRepository.find().lean();
+            const queryChain = mockRecentBetsRepository.find().lean();
             expect(queryChain.sort).toHaveBeenCalledWith({ time: -1 });
         });
 
-        it("should limit to MAX_BIG_WINS_RECORDS", async () => {
+        it("should limit to MAX_RECENT_BETS_RECORDS", async () => {
             // Act
-            await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
-            const queryChain = mockBigWinsRepository.find().lean().sort();
+            const queryChain = mockRecentBetsRepository.find().lean().sort();
             expect(queryChain.limit).toHaveBeenCalledWith(10);
         });
 
-        it("should return empty array when no big wins found", async () => {
+        it("should return empty array when no recent bets found", async () => {
             // Arrange
-            mockBigWinsRepository.find.mockReturnValue({
+            mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
                     sort: jest.fn().mockReturnValue({
                         limit: jest.fn().mockResolvedValue([])
@@ -251,27 +248,27 @@ describe("BigWinConsumer", () => {
             jest.spyOn(consumer, "updateExchangeRateCode");
 
             // Act
-            const result = await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            const result = await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
             expect(result).toEqual([]);
             expect(consumer.updateExchangeRateCode).not.toHaveBeenCalled();
         });
 
-        it("should call updateExchangeRateCode when big wins found", async () => {
+        it("should call updateExchangeRateCode when recent bets found", async () => {
             // Arrange
             jest.spyOn(consumer, "updateExchangeRateCode");
 
             // Act
-            await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
-            expect(consumer.updateExchangeRateCode).toHaveBeenCalledWith(mockRealPlayer, mockBigWins);
+            expect(consumer.updateExchangeRateCode).toHaveBeenCalledWith(mockRealPlayer, mockRecentBets);
         });
 
-        it("should return reversed big wins", async () => {
+        it("should return reversed recent bets", async () => {
             // Act
-            const result = await consumer.getRecentBigWinningWinners(mockRealPlayer);
+            const result = await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
             expect(result).toEqual([
@@ -316,7 +313,7 @@ describe("BigWinConsumer", () => {
 
         beforeEach(() => {
             jest.spyOn(consumer, "getExchangeRates").mockResolvedValue(mockExchangeRates);
-            jest.spyOn(consumer, "updateBigWinExchangeRateCode");
+            jest.spyOn(consumer, "updateRecentBetExchangeRateCode");
         });
 
         it("should call getExchangeRates with correct exchange rate ids", async () => {
@@ -327,32 +324,32 @@ describe("BigWinConsumer", () => {
             expect(consumer.getExchangeRates).toHaveBeenCalledWith(["ex-1", "ex-2"]);
         });
 
-        it("should call updateBigWinExchangeRateCode for each winner", async () => {
+        it("should call updateRecentBetExchangeRateCode for each winner", async () => {
             // Act
             await consumer.updateExchangeRateCode(mockRealPlayer, mockWinners);
 
             // Assert
-            expect(consumer.updateBigWinExchangeRateCode).toHaveBeenCalledTimes(2);
+            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledTimes(2);
         });
 
-        it("should call updateBigWinExchangeRateCode with correct parameters for first winner", async () => {
+        it("should call updateRecentBetExchangeRateCode with correct parameters for first winner", async () => {
             // Act
             await consumer.updateExchangeRateCode(mockRealPlayer, mockWinners);
 
             // Assert
-            expect(consumer.updateBigWinExchangeRateCode).toHaveBeenCalledWith(
+            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(
                 mockWinners[0],
                 "USD",
                 mockExchangeRates
             );
         });
 
-        it("should call updateBigWinExchangeRateCode with correct parameters for second winner", async () => {
+        it("should call updateRecentBetExchangeRateCode with correct parameters for second winner", async () => {
             // Act
             await consumer.updateExchangeRateCode(mockRealPlayer, mockWinners);
 
             // Assert
-            expect(consumer.updateBigWinExchangeRateCode).toHaveBeenCalledWith(
+            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(
                 mockWinners[1],
                 "USD",
                 mockExchangeRates
@@ -360,7 +357,7 @@ describe("BigWinConsumer", () => {
         });
     });
 
-    describe("updateBigWinExchangeRateCode", () => {
+    describe("updateRecentBetExchangeRateCode", () => {
         const mockWinner = { exchangeRateId: "ex-1" };
         const mockCurrencyCode = "USD";
         const mockExchangeRates = [
@@ -369,7 +366,7 @@ describe("BigWinConsumer", () => {
 
         it("should set exchangeRateCode when exchange rate found", () => {
             // Act
-            consumer.updateBigWinExchangeRateCode(mockWinner, mockCurrencyCode, mockExchangeRates);
+            consumer.updateRecentBetExchangeRateCode(mockWinner, mockCurrencyCode, mockExchangeRates);
 
             // Assert
             expect(mockWinner.exchangeRateCode).toEqual({
@@ -385,7 +382,7 @@ describe("BigWinConsumer", () => {
             ];
 
             // Act
-            consumer.updateBigWinExchangeRateCode(mockWinnerClean, mockCurrencyCode, mockExchangeRatesNotFound);
+            consumer.updateRecentBetExchangeRateCode(mockWinnerClean, mockCurrencyCode, mockExchangeRatesNotFound);
 
             // Assert
             expect(mockWinnerClean).not.toHaveProperty("exchangeRateCode");
@@ -398,7 +395,7 @@ describe("BigWinConsumer", () => {
             ];
 
             // Act
-            consumer.updateBigWinExchangeRateCode(mockWinner, mockCurrencyCode, mockExchangeRatesWithString);
+            consumer.updateRecentBetExchangeRateCode(mockWinner, mockCurrencyCode, mockExchangeRatesWithString);
 
             // Assert
             expect(mockWinner.exchangeRateCode.USD).toBe(1.5);
@@ -411,12 +408,75 @@ describe("BigWinConsumer", () => {
             ];
 
             // Act
-            consumer.updateBigWinExchangeRateCode(mockWinner, "EUR", mockExchangeRatesEUR);
+            consumer.updateRecentBetExchangeRateCode(mockWinner, "EUR", mockExchangeRatesEUR);
 
             // Assert
             expect(mockWinner.exchangeRateCode).toEqual({
                 EUR: 0.85
             });
+        });
+    });
+
+    describe("update", () => {
+        const mockData = {
+            roundId: "round-123",
+            winningAmount: 500,
+            baseWinningAmount: 500,
+            multiplier: 5.0,
+        };
+
+        const mockUpdatedRecentBet = {
+            name: "testPlayer",
+            amount: 100,
+            baseAmount: 100,
+            rate: 0.2,
+            time: new Date(),
+            exchangeRateId: "exchange-rate-123",
+            roundId: "round-123",
+            currency: "USD",
+            multiplier: 5.0,
+            winningAmount: 500,
+            baseWinningAmount: 500,
+        };
+
+        beforeEach(() => {
+            mockRecentBetsRepository.findOneAndUpdate.mockResolvedValue(mockUpdatedRecentBet);
+        });
+
+        it("should call findOneAndUpdate with correct parameters", async () => {
+            // Act
+            await consumer.update(mockData);
+
+            // Assert
+            expect(mockRecentBetsRepository.findOneAndUpdate).toHaveBeenCalledWith(
+                { roundId: "round-123" },
+                { $set: { multiplier: 5.0, winningAmount: 500, baseWinningAmount: 500 } },
+                { new: true, lean: true, select: "-_id -uid -__v -playerId -operatorId" }
+            );
+        });
+
+        it("should return updated recent bet without excluded fields", async () => {
+            // Act
+            const result = await consumer.update(mockData);
+
+            // Assert
+            expect(result).toEqual(mockUpdatedRecentBet);
+            expect(result).not.toHaveProperty("_id");
+            expect(result).not.toHaveProperty("uid");
+            expect(result).not.toHaveProperty("__v");
+            expect(result).not.toHaveProperty("playerId");
+            expect(result).not.toHaveProperty("operatorId");
+        });
+
+        it("should return null when recent bet not found", async () => {
+            // Arrange
+            mockRecentBetsRepository.findOneAndUpdate.mockResolvedValue(null);
+
+            // Act
+            const result = await consumer.update(mockData);
+
+            // Assert
+            expect(result).toBeNull();
         });
     });
 

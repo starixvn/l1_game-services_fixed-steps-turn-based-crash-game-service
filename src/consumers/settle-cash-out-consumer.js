@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../constants";
-import { RecentBigWinPublisher } from "../event-publishers";
+import { RecentBetPublisher } from "../event-publishers";
 import helpers from "../helpers/notice-helper";
 import { roundMultiplier } from "../helpers/number-helper";
-import BigWinConsumer from "./big-win-consumer";
+import RecentBetConsumer from "./recent-bet-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
 
 export class SettleCashOutConsumer {
@@ -15,17 +15,17 @@ export class SettleCashOutConsumer {
      * @param {BaseEventPublisher} dependencies.publisher
      * @param {logger} dependencies.logService
      * @param {mongoose.Model} dependencies.betLogsRepository
-     * @param {BigWinConsumer} dependencies.bigWinConsumer
-     * @param {RecentBigWinPublisher} dependencies.recentBigWinPublisher
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
+     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      */
-    constructor({ gameData, settleGameRoundConsumer, publisher, logService, betLogsRepository, bigWinConsumer, recentBigWinPublisher }) {
+    constructor({ gameData, settleGameRoundConsumer, publisher, logService, betLogsRepository, recentBetConsumer, recentBetPublisher }) {
         this.gameData = gameData;
         this.settleGameRoundConsumer = settleGameRoundConsumer;
         this.publisher = publisher;
         this.logService = logService;
         this.betLogsRepository = betLogsRepository;
-        this.bigWinConsumer = bigWinConsumer;
-        this.recentBigWinPublisher = recentBigWinPublisher;
+        this.recentBetConsumer = recentBetConsumer;
+        this.recentBetPublisher = recentBetPublisher;
     }
 
     validateCashOut(player) {
@@ -58,13 +58,13 @@ export class SettleCashOutConsumer {
 
         const rate = this.calculateCurrencyRate(player.session);
         const baseWinningAmount = roundMultiplier(winningAmount, rate);
-        const recentBigWinningWinner = await this.bigWinConsumer.updateBigWin({
+        const recentBet = await this.recentBetConsumer.update({
             roundId,
             winningAmount,
             baseWinningAmount,
             multiplier,
         });
-        this.recentBigWinPublisher.publish(recentBigWinningWinner);
+        this.recentBetPublisher.publish(recentBet);
         return { player, multiplier, roundId, tapCount, amount };
     }
 

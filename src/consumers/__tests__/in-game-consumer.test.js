@@ -4,7 +4,7 @@ import { Core, Table } from "sc-game-base";
 import { Systems } from "sc-game-base/src/constants/systems";
 import { RoundQuery } from "sc-game-base/src/core/query-apis";
 import { MultiplierModes } from "../../constants";
-import { BigWinConsumer, InGameConsumer, ProvablyFairConsumer } from "../../consumers";
+import { InGameConsumer, ProvablyFairConsumer, RecentBetConsumer } from "../../consumers";
 import CrashGameData from "../../game-data";
 
 describe("in game consumer instance", () => {
@@ -43,7 +43,9 @@ describe("in game consumer instance", () => {
         },
         {
             mode: MultiplierModes.Hardcore,
-            multiplierSteps: [1.6, 2.74, 4.85, 8.9, 16.98, 33.97, 71.71, 161.35, 391.86, 1044.96, 3134.87, 10972.06, 47545.6, 285273.6, 3138009.6],
+            multiplierSteps: [
+                1.6, 2.74, 4.85, 8.9, 16.98, 33.97, 71.71, 161.35, 391.86, 1044.96, 3134.87, 10972.06, 47545.6, 285273.6, 3138009.6,
+            ],
         },
     ];
 
@@ -83,8 +85,8 @@ describe("in game consumer instance", () => {
 
     const provablyFairConsumer = stub(ProvablyFairConsumer);
 
-    /** @type {BigWinConsumer}*/
-    const bigWinConsumer = stub(BigWinConsumer);
+    /** @type {RecentBetConsumer}*/
+    const recentBetConsumer = stub(RecentBetConsumer);
 
     const consumer = new InGameConsumer({
         definition,
@@ -94,7 +96,7 @@ describe("in game consumer instance", () => {
         getBalance,
         userInfosRepository,
         provablyFairConsumer,
-        bigWinConsumer,
+        recentBetConsumer,
     });
 
     it("should be instance of Table.EventConsumers.TableInGameConsumer", () => {
@@ -105,7 +107,7 @@ describe("in game consumer instance", () => {
         beforeEach(() => {
             spyOn(Table.EventConsumers.TableInGameConsumer.prototype, "buildPlayersPayload").and.returnValue({});
             spyOn(Core.BaseEventConsumers.InGameConsumer.prototype, "getUserInfo").and.returnValue({});
-            spyOn(bigWinConsumer, "getRecentBigWinningWinners").and.returnValue([]);
+            spyOn(recentBetConsumer, "getRecentBets").and.returnValue([]);
         });
 
         it("should call buildPlayersPayload", async () => {
@@ -132,12 +134,12 @@ describe("in game consumer instance", () => {
             expect(Table.EventConsumers.TableInGameConsumer.prototype.getUserInfo).toHaveBeenCalled();
         });
 
-        it("should call getRecentBigWinningWinners", async () => {
+        it("should call getRecentBets", async () => {
             // act
             await consumer.buildPayload(realPlayer);
 
             // assert
-            expect(bigWinConsumer.getRecentBigWinningWinners).toHaveBeenCalled();
+            expect(recentBetConsumer.getRecentBets).toHaveBeenCalled();
         });
 
         it("should return correct result", async () => {
@@ -153,7 +155,7 @@ describe("in game consumer instance", () => {
                 },
                 user: {},
                 players: {},
-                recentBigWinningWinners: [],
+                recentBets: [],
             };
 
             // act
@@ -175,7 +177,7 @@ describe("in game consumer instance", () => {
             },
             user: {},
             players: {},
-            recentBigWinningWinners: [],
+            recentBets: [],
         };
 
         beforeEach(() => {
