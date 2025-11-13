@@ -23,6 +23,7 @@ export default class RecentBetConsumer {
      */
     async add(player, { roundId, amount, baseAmount, rate }) {
         const recentBet = {
+            roundId,
             name: player.profile.name,
             amount,
             baseAmount,
@@ -32,7 +33,6 @@ export default class RecentBetConsumer {
         };
 
         const document = {
-            roundId,
             uid: player.UID,
             ...recentBet,
         };

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import RecentBetConsumer from "../recent-bet-consumer";
 
 describe("RecentBetConsumer", () => {
-     /**
+    /**
      * @type {RecentBetConsumer}
      */
     let consumer;
@@ -18,15 +18,11 @@ describe("RecentBetConsumer", () => {
         mockExchangeRatesRepository = stubMongoose(mongoose.Model);
         mockGameData = {
             exchangeRates: {
-                exId: "exchange-rate-123"
-            }
+                exId: "exchange-rate-123",
+            },
         };
 
-        consumer = new RecentBetConsumer(
-            mockRecentBetsRepository,
-            mockGameData,
-            mockExchangeRatesRepository
-        );
+        consumer = new RecentBetConsumer(mockRecentBetsRepository, mockGameData, mockExchangeRatesRepository);
     });
     describe("constructor", () => {
         it("should initialize all dependencies correctly", () => {
@@ -39,24 +35,24 @@ describe("RecentBetConsumer", () => {
     describe("add", () => {
         const mockPlayer = {
             profile: {
-                name: "testPlayer"
+                name: "testPlayer",
             },
             UID: "player-uid-123",
             session: {
                 currencyName: "USD",
                 operatorId: "op-456",
-                playerId: "player-789"
-            }
+                playerId: "player-789",
+            },
         };
 
         const mockData = {
-            roundId: "round-123",
+            roundId: 123,
             amount: 100,
             baseAmount: 100,
             winningAmount: 500,
             baseWinningAmount: 500,
             multiplier: 5.0,
-            rate: 0.2
+            rate: 0.2,
         };
 
         beforeEach(() => {
@@ -81,8 +77,8 @@ describe("RecentBetConsumer", () => {
                     baseAmount: 100,
                     rate: 0.2,
                     exchangeRateId: "exchange-rate-123",
-                    roundId: "round-123",
-                    uid: "player-uid-123"
+                    roundId: 123,
+                    uid: "player-uid-123",
                 })
             );
             expect(callArgs.time).toBeInstanceOf(Date);
@@ -99,7 +95,7 @@ describe("RecentBetConsumer", () => {
                 expect.objectContaining({
                     currency: "USD",
                     operatorId: "op-456",
-                    playerId: "player-789"
+                    playerId: "player-789",
                 })
             );
         });
@@ -108,9 +104,9 @@ describe("RecentBetConsumer", () => {
             // Arrange
             const playerWithoutSession = {
                 profile: {
-                    name: "testPlayer"
+                    name: "testPlayer",
                 },
-                UID: "player-uid-123"
+                UID: "player-uid-123",
             };
 
             // Act
@@ -135,9 +131,9 @@ describe("RecentBetConsumer", () => {
             // Arrange
             const playerWithoutSession = {
                 profile: {
-                    name: "testPlayer"
+                    name: "testPlayer",
                 },
-                UID: "player-uid-123"
+                UID: "player-uid-123",
             };
 
             // Act
@@ -153,13 +149,14 @@ describe("RecentBetConsumer", () => {
 
             // Assert
             expect(result).toEqual({
+                roundId: 123,
                 name: "testPlayer",
                 amount: 100,
                 baseAmount: 100,
                 rate: 0.2,
                 time: expect.any(Date),
                 exchangeRateId: "exchange-rate-123",
-                playerId: "player-789"
+                playerId: "player-789",
             });
         });
     });
@@ -167,8 +164,8 @@ describe("RecentBetConsumer", () => {
     describe("getRecentBets", () => {
         const mockRealPlayer = {
             session: {
-                currencyCode: "USD"
-            }
+                currencyCode: "USD",
+            },
         };
 
         const mockRecentBets = [
@@ -176,28 +173,28 @@ describe("RecentBetConsumer", () => {
                 name: "player1",
                 amount: 100,
                 exchangeRateId: "ex-1",
-                time: new Date("2023-01-01")
+                time: new Date("2023-01-01"),
             },
             {
                 name: "player2",
                 amount: 200,
                 exchangeRateId: "ex-2",
-                time: new Date("2023-01-02")
-            }
+                time: new Date("2023-01-02"),
+            },
         ];
 
         const mockExchangeRates = [
             { exId: "ex-1", code: { USD: "1.0" } },
-            { exId: "ex-2", code: { USD: "1.2" } }
+            { exId: "ex-2", code: { USD: "1.2" } },
         ];
 
         beforeEach(() => {
             mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
                     sort: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue(mockRecentBets)
-                    })
-                })
+                        limit: jest.fn().mockResolvedValue(mockRecentBets),
+                    }),
+                }),
             });
             jest.spyOn(consumer, "getExchangeRates").mockResolvedValue(mockExchangeRates);
             jest.spyOn(consumer, "updateRecentBetExchangeRateCode");
@@ -208,14 +205,17 @@ describe("RecentBetConsumer", () => {
             await consumer.getRecentBets(mockRealPlayer);
 
             // Assert
-            expect(mockRecentBetsRepository.find).toHaveBeenCalledWith({}, {
-                _id: false,
-                uid: false,
-                roundId: false,
-                currency: false,
-                operatorId: false,
-                __v: false
-            });
+            expect(mockRecentBetsRepository.find).toHaveBeenCalledWith(
+                {},
+                {
+                    _id: false,
+                    uid: false,
+                    roundId: false,
+                    currency: false,
+                    operatorId: false,
+                    __v: false,
+                }
+            );
         });
 
         it("should sort by time descending", async () => {
@@ -241,9 +241,9 @@ describe("RecentBetConsumer", () => {
             mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
                     sort: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue([])
-                    })
-                })
+                        limit: jest.fn().mockResolvedValue([]),
+                    }),
+                }),
             });
             jest.spyOn(consumer, "updateExchangeRateCode");
 
@@ -278,8 +278,8 @@ describe("RecentBetConsumer", () => {
                     exchangeRateId: "ex-2",
                     time: new Date("2023-01-02"),
                     exchangeRateCode: {
-                        USD: 1.2
-                    }
+                        USD: 1.2,
+                    },
                 },
                 {
                     name: "player1",
@@ -287,9 +287,9 @@ describe("RecentBetConsumer", () => {
                     exchangeRateId: "ex-1",
                     time: new Date("2023-01-01"),
                     exchangeRateCode: {
-                        USD: 1.0
-                    }
-                }
+                        USD: 1.0,
+                    },
+                },
             ]);
         });
     });
@@ -297,18 +297,15 @@ describe("RecentBetConsumer", () => {
     describe("updateExchangeRateCode", () => {
         const mockRealPlayer = {
             session: {
-                currencyCode: "USD"
-            }
+                currencyCode: "USD",
+            },
         };
 
-        const mockWinners = [
-            { exchangeRateId: "ex-1" },
-            { exchangeRateId: "ex-2" }
-        ];
+        const mockWinners = [{ exchangeRateId: "ex-1" }, { exchangeRateId: "ex-2" }];
 
         const mockExchangeRates = [
             { exId: "ex-1", code: { USD: "1.0" } },
-            { exId: "ex-2", code: { USD: "1.2" } }
+            { exId: "ex-2", code: { USD: "1.2" } },
         ];
 
         beforeEach(() => {
@@ -337,11 +334,7 @@ describe("RecentBetConsumer", () => {
             await consumer.updateExchangeRateCode(mockRealPlayer, mockWinners);
 
             // Assert
-            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(
-                mockWinners[0],
-                "USD",
-                mockExchangeRates
-            );
+            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(mockWinners[0], "USD", mockExchangeRates);
         });
 
         it("should call updateRecentBetExchangeRateCode with correct parameters for second winner", async () => {
@@ -349,20 +342,14 @@ describe("RecentBetConsumer", () => {
             await consumer.updateExchangeRateCode(mockRealPlayer, mockWinners);
 
             // Assert
-            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(
-                mockWinners[1],
-                "USD",
-                mockExchangeRates
-            );
+            expect(consumer.updateRecentBetExchangeRateCode).toHaveBeenCalledWith(mockWinners[1], "USD", mockExchangeRates);
         });
     });
 
     describe("updateRecentBetExchangeRateCode", () => {
         const mockWinner = { exchangeRateId: "ex-1" };
         const mockCurrencyCode = "USD";
-        const mockExchangeRates = [
-            { exId: "ex-1", code: { USD: "1.0" } }
-        ];
+        const mockExchangeRates = [{ exId: "ex-1", code: { USD: "1.0" } }];
 
         it("should set exchangeRateCode when exchange rate found", () => {
             // Act
@@ -370,16 +357,14 @@ describe("RecentBetConsumer", () => {
 
             // Assert
             expect(mockWinner.exchangeRateCode).toEqual({
-                USD: 1.0
+                USD: 1.0,
             });
         });
 
         it("should not modify winner when exchange rate not found", () => {
             // Arrange
             const mockWinnerClean = { exchangeRateId: "ex-1" };
-            const mockExchangeRatesNotFound = [
-                { exId: "ex-2", code: { USD: "1.0" } }
-            ];
+            const mockExchangeRatesNotFound = [{ exId: "ex-2", code: { USD: "1.0" } }];
 
             // Act
             consumer.updateRecentBetExchangeRateCode(mockWinnerClean, mockCurrencyCode, mockExchangeRatesNotFound);
@@ -390,9 +375,7 @@ describe("RecentBetConsumer", () => {
 
         it("should parse exchange rate code as float", () => {
             // Arrange
-            const mockExchangeRatesWithString = [
-                { exId: "ex-1", code: { USD: "1.5" } }
-            ];
+            const mockExchangeRatesWithString = [{ exId: "ex-1", code: { USD: "1.5" } }];
 
             // Act
             consumer.updateRecentBetExchangeRateCode(mockWinner, mockCurrencyCode, mockExchangeRatesWithString);
@@ -403,23 +386,21 @@ describe("RecentBetConsumer", () => {
 
         it("should handle different currency codes", () => {
             // Arrange
-            const mockExchangeRatesEUR = [
-                { exId: "ex-1", code: { EUR: "0.85" } }
-            ];
+            const mockExchangeRatesEUR = [{ exId: "ex-1", code: { EUR: "0.85" } }];
 
             // Act
             consumer.updateRecentBetExchangeRateCode(mockWinner, "EUR", mockExchangeRatesEUR);
 
             // Assert
             expect(mockWinner.exchangeRateCode).toEqual({
-                EUR: 0.85
+                EUR: 0.85,
             });
         });
     });
 
     describe("update", () => {
         const mockData = {
-            roundId: "round-123",
+            roundId: 123,
             winningAmount: 500,
             baseWinningAmount: 500,
             multiplier: 5.0,
@@ -432,7 +413,7 @@ describe("RecentBetConsumer", () => {
             rate: 0.2,
             time: new Date(),
             exchangeRateId: "exchange-rate-123",
-            roundId: "round-123",
+            roundId: 123,
             currency: "USD",
             multiplier: 5.0,
             winningAmount: 500,
@@ -449,7 +430,7 @@ describe("RecentBetConsumer", () => {
 
             // Assert
             expect(mockRecentBetsRepository.findOneAndUpdate).toHaveBeenCalledWith(
-                { roundId: "round-123" },
+                { roundId: 123 },
                 { $set: { multiplier: 5.0, winningAmount: 500, baseWinningAmount: 500 } },
                 { new: true, lean: true, select: "-_id -uid -__v -playerId -operatorId" }
             );
@@ -488,9 +469,9 @@ describe("RecentBetConsumer", () => {
                 lean: jest.fn().mockReturnValue({
                     exec: jest.fn().mockResolvedValue([
                         { exId: "ex-1", code: { USD: "1.0" } },
-                        { exId: "ex-2", code: { USD: "1.2" } }
-                    ])
-                })
+                        { exId: "ex-2", code: { USD: "1.2" } },
+                    ]),
+                }),
             });
         });
 
@@ -512,7 +493,7 @@ describe("RecentBetConsumer", () => {
             // Assert
             expect(result).toEqual([
                 { exId: "ex-1", code: { USD: "1.0" } },
-                { exId: "ex-2", code: { USD: "1.2" } }
+                { exId: "ex-2", code: { USD: "1.2" } },
             ]);
         });
     });
