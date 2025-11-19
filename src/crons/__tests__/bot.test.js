@@ -190,6 +190,7 @@ describe("GameBots", () => {
         it("should increment roundId", async () => {
             // Arrange
             const bot = initBot();
+            bot.botsInRoom = { bot1: { red: 1000 } };
             bot.gameData.roundId = 1;
             bot.getMaxBet = jest.fn().mockReturnValue(100);
             bot.getMinBet = jest.fn().mockReturnValue(10);
@@ -197,6 +198,10 @@ describe("GameBots", () => {
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -216,6 +221,10 @@ describe("GameBots", () => {
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -237,6 +246,9 @@ describe("GameBots", () => {
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
             bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -257,6 +269,9 @@ describe("GameBots", () => {
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
             bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -282,8 +297,12 @@ describe("GameBots", () => {
             bot.convertAmountToChip = jest.fn().mockReturnValue(50);
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
             bot.definition.generateResult = jest.fn().mockReturnValue(0.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
+            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
             await bot.placeBet("bot1");
@@ -302,6 +321,10 @@ describe("GameBots", () => {
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(0.5); // Less than firstMultiplier (1.0)
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -323,6 +346,9 @@ describe("GameBots", () => {
             bot.handleCashout = jest.fn();
             bot.definition.generateResult = jest.fn().mockReturnValue(1.5); // Greater than firstMultiplier (1.0)
             bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
 
             // Act
@@ -337,18 +363,90 @@ describe("GameBots", () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: { red: 1000 } };
+            bot.gameData.roundId = 1;
             bot.getMaxBet = jest.fn().mockReturnValue(100);
             bot.getMinBet = jest.fn().mockReturnValue(10);
             bot.convertAmountToChip = jest.fn().mockReturnValue(50);
             bot.updateBalanceAndPublishBetPayload = jest.fn();
             bot.handleCashout = jest.fn();
+            bot.recentBetConsumer.add = jest.fn();
+            bot.recentBetPublisher.publish = jest.fn();
             userInfosRepository.findOneAndUpdate.mockResolvedValue(null);
 
             // Act
             await bot.placeBet("bot1");
 
             // Assert
+            expect(bot.gameData.roundId).toBe(1); // Should not increment
             expect(bot.updateBalanceAndPublishBetPayload).not.toHaveBeenCalled();
+            expect(bot.activeBots.has("bot1")).toBe(false); // Should not set active bot
+            expect(bot.recentBetConsumer.add).not.toHaveBeenCalled();
+            expect(bot.recentBetPublisher.publish).not.toHaveBeenCalled();
+            expect(bot.handleCashout).not.toHaveBeenCalled();
+        });
+
+        it("should not process bet when user has insufficient balance", async () => {
+            // Arrange
+            const bot = initBot();
+            bot.botsInRoom = { bot1: { red: 30 } }; // Balance less than bet amount
+            bot.gameData.roundId = 1;
+            bot.getMaxBet = jest.fn().mockReturnValue(100);
+            bot.getMinBet = jest.fn().mockReturnValue(10);
+            bot.convertAmountToChip = jest.fn().mockReturnValue(50); // Bet amount is 50, but balance is only 30
+            bot.updateBalanceAndPublishBetPayload = jest.fn();
+            bot.handleCashout = jest.fn();
+            bot.recentBetConsumer.add = jest.fn();
+            bot.recentBetPublisher.publish = jest.fn();
+            // Query will fail because red (30) is not greater than betAmount (50)
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(null);
+
+            // Act
+            await bot.placeBet("bot1");
+
+            // Assert
+            expect(userInfosRepository.findOneAndUpdate).toHaveBeenCalledWith(
+                { id: "bot1", red: { $gt: 50 } },
+                { $inc: { red: -50 } },
+                { new: true, lean: true }
+            );
+            expect(bot.gameData.roundId).toBe(1); // Should not increment
+            expect(bot.updateBalanceAndPublishBetPayload).not.toHaveBeenCalled();
+            expect(bot.activeBots.has("bot1")).toBe(false); // Should not set active bot
+            expect(bot.recentBetConsumer.add).not.toHaveBeenCalled();
+            expect(bot.recentBetPublisher.publish).not.toHaveBeenCalled();
+            expect(bot.handleCashout).not.toHaveBeenCalled();
+        });
+
+        it("should call recentBetConsumer.add and recentBetPublisher.publish", async () => {
+            // Arrange
+            const bot = initBot();
+            bot.botsInRoom = { bot1: { red: 1000 } };
+            bot.gameData.roundId = 1;
+            bot.getMaxBet = jest.fn().mockReturnValue(100);
+            bot.getMinBet = jest.fn().mockReturnValue(10);
+            bot.convertAmountToChip = jest.fn().mockReturnValue(50);
+            bot.updateBalanceAndPublishBetPayload = jest.fn();
+            bot.handleCashout = jest.fn();
+            bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
+            bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
+            bot.botRate = 1.0;
+            const mockRecentBet = { id: "bet1", amount: 50, multiplier: 1.0 };
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue(mockRecentBet);
+            bot.recentBetPublisher.publish = jest.fn();
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
+
+            // Act
+            await bot.placeBet("bot1");
+
+            // Assert
+            expect(bot.recentBetConsumer.add).toHaveBeenCalledWith(mockUser, {
+                roundId: 2,
+                amount: 50,
+                baseAmount: 50, // betAmount * botRate = 50 * 1.0
+                rate: 1.0,
+            });
+            expect(bot.recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
         });
     });
 

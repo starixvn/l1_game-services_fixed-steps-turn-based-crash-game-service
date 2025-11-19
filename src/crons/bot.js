@@ -63,7 +63,6 @@ export default class Bot extends Table.Crons.TableGameBot {
     }
 
     async placeBet(botId) {
-        this.gameData.roundId += 1;
         const maxBet = this.getMaxBet(this.botsInRoom[botId]);
         const minBet = this.getMinBet();
         const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, true));
@@ -75,6 +74,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         );
 
         if (user) {
+            this.gameData.roundId += 1;
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
