@@ -1,27 +1,18 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
-import { ProvablyFairConsumer, RoundResultConsumer } from "sc-game-base/src/core/event-consumers";
-import { TableGameDefinition } from "sc-game-base/src/table";
-import { Actions } from "../../constants";
 import CrashGameData from "../../game-data";
-import gameSettings from "../../game-settings";
-import { SettleGameRoundConsumer } from "../settle-game-round-consumer";
+import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
 import { UnsettledRoundConsumer } from "../unsettled-round-consumer";
 
-const definition = new TableGameDefinition(gameSettings, jest.fn());
 let gameData;
 
 /** @type {mongoose.Model}*/
-const betsRepository = stubMongoose(mongoose.Model);
-
-/** @type {mongoose.Model}*/
-const tempBetsRepository = stubMongoose(mongoose.Model);
+const roundsRepository = stubMongoose(mongoose.Model);
 
 /** @type {mongoose.Model}*/
 const betLogsRepository = stubMongoose(mongoose.Model);
-const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
-const roundResultConsumer = stub(RoundResultConsumer);
-const provablyFairConsumer = stub(ProvablyFairConsumer);
+
+const settleCashOutConsumer = stub(SettleCashOutConsumer);
 
 beforeEach(() => {
     gameData = new CrashGameData(3);
@@ -34,168 +25,274 @@ afterEach(() => {
 function initConsumer() {
     return new UnsettledRoundConsumer({
         gameData,
-        definition,
-        betsRepository,
+        roundsRepository,
         betLogsRepository,
-        tempBetsRepository,
-        settleGameRoundConsumer,
-        roundResultConsumer,
-        provablyFairConsumer,
+        settleCashOutConsumer,
     });
 }
 
 describe("unsettledRoundConsumer", () => {
-    describe("proceedUnsettledBets", () => {
+    describe("proceed", () => {
         describe("when there are no unsettled bets", () => {
-            it("shouldn't call betLogsRepository.insertMany", async () => {
+            it("should not call settleCashOutConsumer", async () => {
                 // Arrange
                 const unsettledRoundConsumer = initConsumer();
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue([]),
+                    }),
+                });
 
                 // Act
-                await unsettledRoundConsumer.proceedUnsettledBets([]);
+                await unsettledRoundConsumer.proceed();
 
                 // Assert
-                expect(betLogsRepository.insertMany).not.toHaveBeenCalled();
+                expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalled();
             });
         });
 
         describe("when there are unsettled bets", () => {
-            beforeAll(() => {
-                jest.useFakeTimers("modern");
-                jest.setSystemTime(new Date(2024, 3, 1));
-            });
-
-            afterAll(() => {
-                jest.useRealTimers();
-            });
-
-            const unsettledBets = [
-                {
-                    uid: "player1-uid",
-                    name: "player1",
-                    clientSeed: "seed1",
-                    time: new Date(),
-                    amount: 10,
-                    roundId: 1,
-                    siteId: "123",
-                    currency: "USD",
-                    rate: 1,
-                    operatorId: "OW",
-                    playerId: 1,
-                },
-                {
-                    uid: "player2-uid",
-                    name: "player2",
-                    clientSeed: "seed2",
-                    time: new Date(new Date().getTime() + 10000),
-                    amount: 10,
-                    roundId: 1,
-                    siteId: "123",
-                    currency: "USD",
-                    rate: 1,
-                    operatorId: "OW",
-                    playerId: 2,
-                },
-            ];
-
-            it("should insert refund betlogs for player not cashing out", async () => {
+            it("should query unsettled rounds and process them", async () => {
                 // Arrange
-                const betLogs = [
+                const unsettledRounds = [
                     {
-                        uid: "player2-uid",
-                        name: "player2",
-                        playerId: 2,
-                        action: Actions.CashOut,
-                        amount: 10,
-                        siteId: "123",
-                        currency: "USD",
-                        rate: 1,
-                        operatorId: "OW",
-                    },
-                ];
-                gameData.lastResultRecord = { serverSeed: "seed", finalHash: "hash" };
-
-                betLogsRepository.find().lean().exec.mockReturnValueOnce(betLogs);
-                const unsettledRoundConsumer = initConsumer();
-
-                // Act
-                await unsettledRoundConsumer.proceedUnsettledBets(unsettledBets);
-
-                // Assert
-                expect(betLogsRepository.insertMany).toHaveBeenCalledWith([
-                    {
+                        id: "round-1",
                         uid: "player1-uid",
                         name: "player1",
-                        time: new Date(2024, 3, 1),
-                        action: Actions.Refund,
-                        amount: 10,
-                        winAmount: 10,
-                        clientSendTime: new Date(2024, 3, 1),
-                        receivedTime: new Date(2024, 3, 1),
-                        roundId: 1,
-                        siteId: "123",
-                        currency: "USD",
-                        rate: 1,
-                        operatorId: "OW",
-                        playerId: 1,
-                    },
-                ]);
-            });
-
-            it("should insert refund betlogs for player half cash out", async () => {
-                // Arrange
-                const betLogs = [
-                    {
-                        uid: "player1-uid",
-                        name: "player1",
-                        playerId: 1,
-                        action: Actions.HalfCashOut,
-                        amount: 5,
-                        siteId: "123",
-                        currency: "USD",
-                        rate: 1,
-                        operatorId: "OW",
-                    },
-                    {
-                        uid: "player2-uid",
-                        name: "player2",
-                        playerId: 2,
-                        action: Actions.CashOut,
-                        amount: 10,
-                        siteId: "123",
-                        currency: "USD",
-                        rate: 1,
-                        operatorId: "OW",
+                        amount: 100,
+                        multiplierMode: 2,
                     },
                 ];
 
-                gameData.lastResultRecord = { serverSeed: "seed", finalHash: "hash" };
+                const betLogs = [
+                    {
+                        siteId: "site-1",
+                        currency: "USD",
+                        operatorId: "op-1",
+                        playerId: "player-1",
+                        rate: 1.0,
+                        currencyMultiplier: 1.0,
+                        currencyCode: "USD",
+                        multiplier: 2.5,
+                    },
+                ];
 
-                betLogsRepository.find().lean().exec.mockReturnValueOnce(betLogs);
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(unsettledRounds),
+                    }),
+                });
+
+                betLogsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(betLogs),
+                    }),
+                });
+
+                settleCashOutConsumer.proceedCashOut.mockResolvedValue();
+
                 const unsettledRoundConsumer = initConsumer();
 
                 // Act
-                await unsettledRoundConsumer.proceedUnsettledBets(unsettledBets);
+                await unsettledRoundConsumer.proceed();
 
                 // Assert
-                expect(betLogsRepository.insertMany).toHaveBeenCalledWith([
+                expect(roundsRepository.find).toHaveBeenCalledWith({ paid: false });
+                expect(betLogsRepository.find).toHaveBeenCalledWith(
+                    { roundId: "round-1" },
+                    { _id: false },
+                    { sort: { time: -1 } }
+                );
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
                     {
+                        UID: "player1-uid",
+                        profile: { name: "player1" },
+                        session: {
+                            siteId: "site-1",
+                            currencyName: "USD",
+                            currencyCode: "USD",
+                            multiplier: 1.0,
+                            operatorId: "op-1",
+                            playerId: "player-1",
+                            rate: 1.0,
+                        },
+                    },
+                    true
+                );
+                expect(gameData.ingame.player1).toEqual({
+                    activeBet: {
+                        roundId: "round-1",
+                        tapCount: 1,
+                        currentMultiplier: 2.5,
+                        amount: 100,
+                        multiplierMode: 2,
+                    },
+                });
+            });
+
+            it("should skip rounds with no bet logs", async () => {
+                // Arrange
+                const unsettledRounds = [
+                    {
+                        id: "round-1",
                         uid: "player1-uid",
                         name: "player1",
-                        time: new Date(),
-                        action: Actions.Refund,
-                        amount: 5,
-                        winAmount: 5,
-                        clientSendTime: new Date(),
-                        receivedTime: new Date(),
-                        roundId: 1,
-                        siteId: "123",
-                        currency: "USD",
-                        rate: 1,
-                        operatorId: "OW",
-                        playerId: 1,
+                        amount: 100,
+                        multiplierMode: 2,
                     },
-                ]);
+                ];
+
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(unsettledRounds),
+                    }),
+                });
+
+                betLogsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue([]),
+                    }),
+                });
+
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalled();
+            });
+
+            it("should handle multiple unsettled rounds", async () => {
+                // Arrange
+                const unsettledRounds = [
+                    {
+                        id: "round-1",
+                        uid: "player1-uid",
+                        name: "player1",
+                        amount: 100,
+                        multiplierMode: 2,
+                    },
+                    {
+                        id: "round-2",
+                        uid: "player2-uid",
+                        name: "player2",
+                        amount: 200,
+                        multiplierMode: 3,
+                    },
+                ];
+
+                const betLogs1 = [
+                    {
+                        siteId: "site-1",
+                        currency: "USD",
+                        operatorId: "op-1",
+                        playerId: "player-1",
+                        rate: 1.0,
+                        currencyMultiplier: 1.0,
+                        currencyCode: "USD",
+                        multiplier: 2.5,
+                    },
+                ];
+
+                const betLogs2 = [
+                    {
+                        siteId: "site-2",
+                        currency: "EUR",
+                        operatorId: "op-2",
+                        playerId: "player-2",
+                        rate: 0.85,
+                        currencyMultiplier: 1.2,
+                        currencyCode: "EUR",
+                        multiplier: 3.0,
+                    },
+                ];
+
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(unsettledRounds),
+                    }),
+                });
+
+                betLogsRepository.find
+                    .mockReturnValueOnce({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(betLogs1),
+                        }),
+                    })
+                    .mockReturnValueOnce({
+                        lean: jest.fn().mockReturnValue({
+                            exec: jest.fn().mockResolvedValue(betLogs2),
+                        }),
+                    });
+
+                settleCashOutConsumer.proceedCashOut.mockResolvedValue();
+
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
+            });
+
+            it("should calculate tapCount from bet logs length", async () => {
+                // Arrange
+                const unsettledRounds = [
+                    {
+                        id: "round-1",
+                        uid: "player1-uid",
+                        name: "player1",
+                        amount: 100,
+                        multiplierMode: 2,
+                    },
+                ];
+
+                const betLogs = [
+                    {
+                        siteId: "site-1",
+                        currency: "USD",
+                        operatorId: "op-1",
+                        playerId: "player-1",
+                        rate: 1.0,
+                        currencyMultiplier: 1.0,
+                        currencyCode: "USD",
+                        multiplier: 2.5,
+                    },
+                    {
+                        siteId: "site-1",
+                        currency: "USD",
+                        operatorId: "op-1",
+                        playerId: "player-1",
+                        rate: 1.0,
+                        currencyMultiplier: 1.0,
+                        currencyCode: "USD",
+                        multiplier: 3.0,
+                    },
+                ];
+
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(unsettledRounds),
+                    }),
+                });
+
+                betLogsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(betLogs),
+                    }),
+                });
+
+                settleCashOutConsumer.proceedCashOut.mockResolvedValue();
+
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(gameData.ingame.player1.activeBet.tapCount).toBe(2);
             });
         });
     });

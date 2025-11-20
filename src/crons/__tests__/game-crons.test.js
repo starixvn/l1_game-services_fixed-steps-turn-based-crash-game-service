@@ -127,7 +127,6 @@ describe("GameCrons", () => {
         cron.queryLastResult = jest.fn();
         cron.getSettingForNewRound = jest.fn();
         cron.updateExchangeRates = jest.fn();
-        cron.proceedUnsettledBets = jest.fn();
         cron.startCron = jest.fn();
     });
 
@@ -150,6 +149,9 @@ describe("GameCrons", () => {
 
     describe("start", () => {
         it("should call all required initialization methods", async () => {
+            // Arrange
+            unsettledRoundConsumer.proceed = jest.fn().mockResolvedValue();
+
             // Act
             await cron.start();
 
@@ -158,7 +160,7 @@ describe("GameCrons", () => {
             expect(cron.queryLastResult).toHaveBeenCalled();
             expect(cron.getSettingForNewRound).toHaveBeenCalled();
             expect(cron.updateExchangeRates).toHaveBeenCalled();
-            expect(cron.proceedUnsettledBets).toHaveBeenCalled();
+            expect(unsettledRoundConsumer.proceed).toHaveBeenCalled();
             expect(cron.startCron).toHaveBeenCalled();
         });
     });
@@ -252,217 +254,5 @@ describe("GameCrons", () => {
     });
 
 
-    describe("proceedUnsettledBets", () => {
-        const mockUnsettledBets = [
-            {
-                id: "round-1",
-                uid: "player-1",
-                name: "player1",
-                amount: 100,
-                paid: false,
-                multiplierMode: 2
-            },
-            {
-                id: "round-2", 
-                uid: "player-2",
-                name: "player2",
-                amount: 200,
-                paid: false,
-                multiplierMode: 3
-            }
-        ];
-
-        const mockBetLogs = [
-            {
-                siteId: "site-1",
-                currency: "USD",
-                operatorId: "op-1",
-                playerId: "player-1",
-                rate: 1.0,
-                currencyMultiplier: 1.0,
-                currencyCode: "USD",
-                multiplier: 2.5
-            }
-        ];
-
-        beforeEach(() => {
-            // Create a fresh cron instance for proceedUnsettledBets tests
-            cron = createBaseGameCron();
-            
-            roundsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(mockUnsettledBets)
-                })
-            });
-
-            betLogsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(mockBetLogs)
-                })
-            });
-
-            settleCashOutConsumer.proceedCashOut = jest.fn().mockResolvedValue();
-        });
-
-        it("should query unsettled bets from roundsRepository", async () => {
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(roundsRepository.find).toHaveBeenCalledWith({ paid: false });
-            expect(roundsRepository.find().lean).toHaveBeenCalled();
-            expect(roundsRepository.find().lean().exec).toHaveBeenCalled();
-        });
-
-        it("should query bet logs for each unsettled round", async () => {
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(betLogsRepository.find).toHaveBeenCalledWith(
-                { roundId: "round-1" },
-                { _id: false },
-                { sort: { time: -1 } }
-            );
-            expect(betLogsRepository.find().lean).toHaveBeenCalled();
-            expect(betLogsRepository.find().lean().exec).toHaveBeenCalled();
-        });
-
-        it("should create player object with correct structure", async () => {
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(cron.gameData.ingame.player1).toEqual({
-                activeBet: {
-                    roundId: "round-1",
-                    tapCount: 1,
-                    currentMultiplier: 2.5,
-                    amount: 100,
-                    multiplierMode: 2
-                }
-            });
-        });
-
-        it("should call settleCashOutConsumer for each player", async () => {
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
-                {
-                    UID: "player-1",
-                    profile: { name: "player1" },
-                    session: {
-                        siteId: "site-1",
-                        currencyName: "USD",
-                        currencyCode: "USD",
-                        multiplier: 1.0,
-                        operatorId: "op-1",
-                        playerId: "player-1",
-                        rate: 1.0
-                    }
-                },
-                true
-            );
-        });
-
-        it("should handle multiple unsettled bets", async () => {
-            // Arrange
-            const multipleBets = [
-                { id: "round-1", uid: "player-1", name: "player1", amount: 100, paid: false, multiplierMode: 1 },
-                { id: "round-2", uid: "player-2", name: "player2", amount: 200, paid: false, multiplierMode: 4 }
-            ];
-            
-            roundsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(multipleBets)
-                })
-            });
-
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
-        });
-
-        it("should handle empty unsettled bets", async () => {
-            // Arrange
-            roundsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue([])
-                })
-            });
-
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalled();
-        });
-
-        it("should handle bet logs with multiple entries", async () => {
-            // Arrange
-            const multipleBetLogs = [
-                { siteId: "site-1", currency: "USD", operatorId: "op-1", playerId: "player-1", rate: 1.0, currencyMultiplier: 1.0, currencyCode: "USD", multiplier: 2.5 },
-                { siteId: "site-1", currency: "USD", operatorId: "op-1", playerId: "player-1", rate: 1.0, currencyMultiplier: 1.0, currencyCode: "USD", multiplier: 3.0 }
-            ];
-            
-            betLogsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(multipleBetLogs)
-                })
-            });
-
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(cron.gameData.ingame.player1.activeBet.tapCount).toBe(2);
-        });
-
-        it("should extract correct data from bet logs", async () => {
-            // Arrange
-            const betLogsWithData = [
-                {
-                    siteId: "site-123",
-                    currency: "EUR",
-                    operatorId: "op-456",
-                    playerId: "player-789",
-                    rate: 0.85,
-                    currencyMultiplier: 1.2,
-                    currencyCode: "EUR",
-                    multiplier: 1.5
-                }
-            ];
-            
-            betLogsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(betLogsWithData)
-                })
-            });
-
-            // Act
-            await cron.proceedUnsettledBets();
-
-            // Assert
-            expect(cron.gameData.ingame.player1.activeBet.currentMultiplier).toBe(1.5);
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    session: expect.objectContaining({
-                        siteId: "site-123",
-                        currencyName: "EUR",
-                        currencyCode: "EUR",
-                        operatorId: "op-456",
-                        playerId: "player-789",
-                        rate: 0.85,
-                        multiplier: 1.2
-                    })
-                }),
-                true
-            );
-        });
-    });
 
 });

@@ -1,38 +1,66 @@
-import { UnsettledRoundConsumer as BaseUnsettledRoundConsumer } from "sc-game-base/src/core/event-consumers";
-import { Actions } from "../constants";
+import { SettleCashOutConsumer } from "./settle-cash-out-consumer";
+export class UnsettledRoundConsumer {
+    /**
+     * @param {Object} dependencies
+     * @param {GameData} dependencies.gameData
+     * @param {mongoose.Model} dependencies.roundsRepository
+     * @param {mongoose.Model} dependencies.betLogsRepository
+     * @param {SettleCashOutConsumer} dependencies.settleCashOutConsumer
+     */
+    constructor({ gameData, roundsRepository, betLogsRepository, settleCashOutConsumer }) {
+        this.gameData = gameData;
+        this.roundsRepository = roundsRepository;
+        this.betLogsRepository = betLogsRepository;
 
-export class UnsettledRoundConsumer extends BaseUnsettledRoundConsumer {
-    async proceedUnsettledBets(unsettledBets) {
-        if (unsettledBets.length > 0) {
-            const betLogs = await this.betLogsRepository.find({ roundId: this.gameData.roundId }).lean().exec();
-            const newBetLogs = [];
+        this.settleCashOutConsumer = settleCashOutConsumer;
+    }
 
-            for (const bet of unsettledBets.filter((x) => x.playerId)) {
-                const betLog = betLogs.filter((x) => x.playerId === bet.playerId);
+    async proceed() {
+        const unsettledBets = await this.roundsRepository.find({ paid: false }).lean().exec();
 
-                if (!betLog.some((x) => x.action === Actions.CashOut)) {
-                    const halfCashOutLog = betLog.find((x) => x.action === Actions.HalfCashOut);
-                    const amount = halfCashOutLog ? halfCashOutLog.amount : bet.amount;
-                    newBetLogs.push({
-                        uid: bet.uid,
-                        name: bet.name,
-                        time: new Date(),
-                        action: Actions.Refund,
-                        amount: amount,
-                        winAmount: amount,
-                        clientSendTime: new Date(),
-                        receivedTime: new Date(),
-                        roundId: bet.roundId,
-                        siteId: bet.siteId,
-                        currency: bet.currency,
-                        rate: bet.rate,
-                        operatorId: bet.operatorId,
-                        playerId: bet.playerId,
-                    });
+        await Promise.all(
+            Object.values(unsettledBets).map(async (round) => {
+                const betLogs = await this.betLogsRepository
+                    .find({ roundId: round.id }, { _id: false }, { sort: { time: -1 } })
+                    .lean()
+                    .exec();
+
+                const isBetLogNotExisted = !betLogs || betLogs.length === 0;
+                if (isBetLogNotExisted) {
+                    return;
                 }
-            }
 
-            await this.betLogsRepository.insertMany(newBetLogs);
-        }
+                const { siteId, currency, operatorId, playerId, rate, currencyMultiplier, currencyCode, multiplier } = betLogs[0];
+                const tapCount = betLogs.length;
+
+                const player = {
+                    UID: round.uid,
+                    profile: {
+                        name: round.name,
+                    },
+                    session: {
+                        siteId,
+                        currencyName: currency,
+                        currencyCode: currencyCode,
+                        multiplier: currencyMultiplier,
+                        operatorId,
+                        playerId,
+                        rate,
+                    },
+                };
+
+                this.gameData.ingame[player.profile.name] = {
+                    activeBet: {
+                        roundId: round.id,
+                        tapCount: tapCount,
+                        currentMultiplier: multiplier,
+                        amount: round.amount,
+                        multiplierMode: round.multiplierMode,
+                    },
+                };
+
+                await this.settleCashOutConsumer.proceedCashOut(player, true);
+            })
+        );
     }
 }
