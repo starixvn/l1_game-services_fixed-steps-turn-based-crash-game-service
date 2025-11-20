@@ -65,9 +65,9 @@ export default class Bot extends Table.Crons.TableGameBot {
     async placeBet(botId) {
         const maxBet = this.getMaxBet(this.botsInRoom[botId]);
         const minBet = this.getMinBet();
-        const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, true));
+        const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, false));
 
-        const user = await this.userInfosRepository.findOneAndUpdate(
+        let user = await this.userInfosRepository.findOneAndUpdate(
             { id: botId, red: { $gt: betAmount } },
             { $inc: { red: -betAmount } },
             { new: true, lean: true }
@@ -85,6 +85,7 @@ export default class Bot extends Table.Crons.TableGameBot {
             );
             const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
             const multiplier = result > firstMultiplier ? firstMultiplier : 0;
+            user.profile = { name: user.name };
 
             this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
 

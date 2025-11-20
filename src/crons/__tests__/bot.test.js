@@ -1,6 +1,7 @@
 import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
+import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
 import { TableGameDefinition } from "sc-game-base/src/table";
 import { RecentBetConsumer } from "../../consumers";
 import { RecentBetPublisher } from "../../event-publishers";
@@ -16,6 +17,14 @@ jest.mock("../../consumers", () => ({
 }));
 jest.mock("../../event-publishers", () => ({
     RecentBetPublisher: jest.fn(),
+}));
+jest.mock("sc-game-base/src/core/helpers", () => ({
+    ServerSeedHelper: {
+        generateServerSeed: jest.fn(),
+    },
+    SeedHelper: {
+        getSHA512Hash: jest.fn(),
+    },
 }));
 
 const userInfosRepository = stubMongoose(mongoose.Model);
@@ -62,6 +71,9 @@ afterEach(() => {
             fixedStepsMultiplierConfigs,
         },
     };
+    // Reset seed helper mocks
+    ServerSeedHelper.generateServerSeed.mockReturnValue("mock-server-seed");
+    SeedHelper.getSHA512Hash.mockReturnValue("mock-final-hash");
 });
 describe("GameBots", () => {
     describe("GameBot Constructor", () => {
@@ -202,13 +214,17 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
 
             // Assert
             expect(bot.gameData.roundId).toBe(2);
+            expect(ServerSeedHelper.generateServerSeed).toHaveBeenCalled();
+            expect(SeedHelper.getSHA512Hash).toHaveBeenCalledWith("mock-server-seed");
+            expect(bot.definition.generateResult).toHaveBeenCalledWith("mock-final-hash");
         });
 
         it("should get max and min bet amounts", async () => {
@@ -225,7 +241,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -249,7 +266,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -272,7 +290,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -302,7 +321,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -325,7 +345,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -349,7 +370,8 @@ describe("GameBots", () => {
             bot.botRate = 1.0;
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.recentBetPublisher.publish = jest.fn();
-            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000 });
+            const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
+            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
             // Act
             await bot.placeBet("bot1");
@@ -440,12 +462,20 @@ describe("GameBots", () => {
             await bot.placeBet("bot1");
 
             // Assert
-            expect(bot.recentBetConsumer.add).toHaveBeenCalledWith(mockUser, {
-                roundId: 2,
-                amount: 50,
-                baseAmount: 50, // betAmount * botRate = 50 * 1.0
-                rate: 1.0,
-            });
+            expect(bot.recentBetConsumer.add).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: "bot1",
+                    red: 1000,
+                    name: "Bot1",
+                    profile: { name: "Bot1" },
+                }),
+                {
+                    roundId: 2,
+                    amount: 50,
+                    baseAmount: 50, // betAmount * botRate = 50 * 1.0
+                    rate: 1.0,
+                }
+            );
             expect(bot.recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
         });
     });
