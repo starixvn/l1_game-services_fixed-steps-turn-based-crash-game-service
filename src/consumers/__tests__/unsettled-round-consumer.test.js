@@ -294,6 +294,98 @@ describe("unsettledRoundConsumer", () => {
                 // Assert
                 expect(gameData.ingame.player1.activeBet.tapCount).toBe(2);
             });
+
+        it("should only settle rounds with existing bet logs out of multiple rounds", async () => {
+            // Arrange
+            const unsettledRounds = [
+                { id: "r1", uid: "uid1", name: "player1", amount: 150, multiplierMode: 2 },
+                { id: "r2", uid: "uid2", name: "player2", amount: 250, multiplierMode: 3 },
+                { id: "r3", uid: "uid3", name: "player3", amount: 350, multiplierMode: 4 },
+                { id: "r4", uid: "uid4", name: "player4", amount: 450, multiplierMode: 5 },
+            ];
+
+            // betLogs structure: Only r1 and r3 have bet logs, r2 and r4 do not.
+            const betLogsForRounds = {
+                r1: [
+                    {
+                        siteId: "site-1",
+                        currency: "USD",
+                        operatorId: "op-1",
+                        playerId: "player-1",
+                        rate: 1.0,
+                        currencyMultiplier: 1.0,
+                        currencyCode: "USD",
+                        multiplier: 2.5,
+                    }
+                ],
+                r2: [],
+                r3: [
+                    {
+                        siteId: "site-2",
+                        currency: "EUR",
+                        operatorId: "op-2",
+                        playerId: "player-3",
+                        rate: 2.0,
+                        currencyMultiplier: 2.0,
+                        currencyCode: "EUR",
+                        multiplier: 3.5,
+                    },
+                    {
+                        siteId: "site-2",
+                        currency: "EUR",
+                        operatorId: "op-2",
+                        playerId: "player-3",
+                        rate: 2.0,
+                        currencyMultiplier: 2.0,
+                        currencyCode: "EUR",
+                        multiplier: 4.5,
+                    }
+                ],
+                r4: []
+            };
+
+            // Mock implementation for roundsRepository
+            roundsRepository.find.mockReturnValue({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(unsettledRounds),
+                }),
+            });
+
+            // patch betLogsRepository.find to return corresponding bet logs for each roundId
+            betLogsRepository.find.mockImplementation(({ roundId }) => ({
+                lean: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(betLogsForRounds[roundId] || []),
+                }),
+            }));
+
+            settleCashOutConsumer.proceedCashOut.mockResolvedValue();
+
+            const unsettledRoundConsumer = initConsumer();
+
+            // Act
+            await unsettledRoundConsumer.proceed();
+
+            // Assert: Only r1 (player1) and r3 (player3) should have activeBet set
+            expect(gameData.ingame["player1"]).toBeDefined();
+            expect(gameData.ingame["player1"].activeBet.tapCount).toBe(1);
+
+            expect(gameData.ingame["player3"]).toBeDefined();
+            expect(gameData.ingame["player3"].activeBet.tapCount).toBe(2);
+
+            expect(gameData.ingame["player2"]).toBeUndefined();
+            expect(gameData.ingame["player4"]).toBeUndefined();
+
+            // SettleCashOut should be called only for r1 and r3
+            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
+            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
+                expect.objectContaining({ profile: { name: "player1" } }),
+                true
+            );
+            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
+                expect.objectContaining({ profile: { name: "player3" } }),
+                true
+            );
+        });
         });
     });
 });

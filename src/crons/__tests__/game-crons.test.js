@@ -124,7 +124,6 @@ describe("GameCrons", () => {
         cron.bot.run = jest.fn();
         cron.bot.cashOut = jest.fn();
         cron.initRoundId = jest.fn();
-        cron.queryLastResult = jest.fn();
         cron.getSettingForNewRound = jest.fn();
         cron.updateExchangeRates = jest.fn();
         cron.startCron = jest.fn();
@@ -157,7 +156,6 @@ describe("GameCrons", () => {
 
             // Assert
             expect(cron.initRoundId).toHaveBeenCalled();
-            expect(cron.queryLastResult).toHaveBeenCalled();
             expect(cron.getSettingForNewRound).toHaveBeenCalled();
             expect(cron.updateExchangeRates).toHaveBeenCalled();
             expect(unsettledRoundConsumer.proceed).toHaveBeenCalled();

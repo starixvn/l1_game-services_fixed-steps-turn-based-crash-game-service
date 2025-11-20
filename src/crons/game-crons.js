@@ -65,7 +65,6 @@ export default class GameCron extends Core.Crons.BaseGameCron {
     }
     async start() {
         await this.initRoundId();
-        await this.queryLastResult();
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
         await this.unsettledRoundConsumer.proceed();

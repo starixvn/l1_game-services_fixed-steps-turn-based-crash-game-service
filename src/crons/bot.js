@@ -67,7 +67,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         const minBet = this.getMinBet();
         const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, false));
 
-        let user = await this.userInfosRepository.findOneAndUpdate(
+        const user = await this.userInfosRepository.findOneAndUpdate(
             { id: botId, red: { $gt: betAmount } },
             { $inc: { red: -betAmount } },
             { new: true, lean: true }
