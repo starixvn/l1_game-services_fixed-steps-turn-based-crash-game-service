@@ -29,10 +29,6 @@ const Schema = new mongoose.Schema({
     multiplierMode: { type: Number, default: 0 },
 });
 
-export function tempBetLogs(gameConfigName) {
-    return mongoose.model(`${gameConfigName}_tmpbetlogs`, Schema);
-}
-
 export default function (gameConfigName) {
     return mongoose.model(`${gameConfigName}_betlogs`, Schema);
 }
