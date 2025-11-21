@@ -53,7 +53,7 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
         await this.getBalance(realPlayer, true);
 
         const user = await this.getUserInfo(realPlayer.UID);
-        const recentBets = await this.recentBetConsumer.getRecentBets(realPlayer);
+        const recentBets = await this.recentBetConsumer.getRecentBets();
         return {
             gameConfigs,
             user,

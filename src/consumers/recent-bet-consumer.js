@@ -1,17 +1,21 @@
 import mongoose from "mongoose";
+import RecentBetPublisher from "../event-publishers/recent-bet-publisher";
 import GameData from "../game-data";
 const MAX_RECENT_BETS_RECORDS = 10;
 
 export default class RecentBetConsumer {
     /**
-     * @param {mongoose.Model} recentBetsRepository
-     * @param {GameData} gameData
-     * @param {mongoose.Model} exchangeRatesRepository
+     * @param {Object} dependencies
+     * @param {mongoose.Model} dependencies.recentBetsRepository
+     * @param {GameData} dependencies.gameData
+     * @param {mongoose.Model} dependencies.exchangeRatesRepository
+     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      */
-    constructor(recentBetsRepository, gameData, exchangeRatesRepository) {
+    constructor({ recentBetsRepository, gameData, exchangeRatesRepository, recentBetPublisher }) {
         this.recentBetsRepository = recentBetsRepository;
         this.gameData = gameData;
         this.exchangeRatesRepository = exchangeRatesRepository;
+        this.recentBetPublisher = recentBetPublisher;
     }
     /**
      * @param {Object} player
@@ -45,7 +49,7 @@ export default class RecentBetConsumer {
         }
 
         await this.recentBetsRepository.create(document);
-        return recentBet;
+        this.recentBetPublisher.publish(recentBet);
     }
 
     /**
@@ -56,19 +60,22 @@ export default class RecentBetConsumer {
      * @param {number} data.multiplier
      */
     async update({ roundId, winningAmount, baseWinningAmount, multiplier }) {
-        return await this.recentBetsRepository.findOneAndUpdate(
+        const recentBet = await this.recentBetsRepository.findOneAndUpdate(
             { roundId },
             { $set: { multiplier, winningAmount, baseWinningAmount } },
             { new: true, lean: true, select: "-_id -uid -__v -playerId -operatorId" }
         );
+        if (recentBet) {
+            this.recentBetPublisher.publish(recentBet);
+        }
     }
     /**
      * @param {Object} realPlayer
      * @returns {Object[]}
      */
-    async getRecentBets(realPlayer) {
+    async getRecentBets() {
         const recentBets = await this.recentBetsRepository
-            .find({}, { _id: false, uid: false, roundId: false, currency: false, operatorId: false, __v: false })
+            .find({}, { _id: false, uid: false, currency: false, operatorId: false, __v: false })
             .lean()
             .sort({ time: -1 })
             .limit(MAX_RECENT_BETS_RECORDS);
@@ -76,47 +83,6 @@ export default class RecentBetConsumer {
         if (recentBets.length === 0) {
             return [];
         }
-        await this.updateExchangeRateCode(realPlayer, recentBets);
-        return recentBets.reverse();
-    }
-
-    /**
-     * @param {Object} realPlayer
-     * @param {Object[]} bets
-     */
-    async updateExchangeRateCode(realPlayer, bets) {
-        const exchangeRates = await this.getExchangeRates(bets.map((bet) => bet.exchangeRateId));
-        const { session } = realPlayer;
-        for (const bet of bets) {
-            this.updateRecentBetExchangeRateCode(bet, session.currencyCode, exchangeRates);
-        }
-    }
-
-    updateRecentBetExchangeRateCode(bet, currencyCode, exchangeRates) {
-        const exchangeRate = exchangeRates.find((er) => er.exId === bet.exchangeRateId);
-
-        if (!exchangeRate) {
-            return;
-        }
-        bet.exchangeRateCode = {
-            [currencyCode]: parseFloat(exchangeRate.code[currencyCode]),
-        };
-    }
-
-    /**
-     * @param {number[]} exIds
-     * @returns {Object[]}
-     */
-    async getExchangeRates(exIds) {
-        const filter = {
-            exId: { $in: exIds },
-        };
-        const projection = {
-            _id: false,
-            exId: true,
-            code: true,
-        };
-
-        return this.exchangeRatesRepository.find(filter, projection).lean().exec();
+        return recentBets;
     }
 }

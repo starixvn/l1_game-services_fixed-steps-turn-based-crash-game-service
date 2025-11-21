@@ -1,6 +1,5 @@
 import Chance from "chance";
 import { Systems } from "sc-game-base/src/constants";
-import { RecentBetConsumer } from "../../consumers";
 import CrashGameData from "../../game-data";
 import RecentBetPublisher from "../recent-bet-publisher";
 
@@ -12,20 +11,13 @@ describe("RecentBetPublisher", () => {
      */
     let publisher;
     let gameData;
-    /**
-     * @type {RecentBetConsumer}
-     */
-    let recentBetConsumer;
     let gameName;
 
     beforeEach(() => {
         gameName = chance.string({ length: 10 });
         gameData = new CrashGameData(10);
-        recentBetConsumer = {
-            updateExchangeRateCode: jest.fn(),
-        };
 
-        publisher = new RecentBetPublisher(gameName, gameData, recentBetConsumer);
+        publisher = new RecentBetPublisher(gameName, gameData);
     });
 
     afterEach(() => {
@@ -37,7 +29,6 @@ describe("RecentBetPublisher", () => {
             // Assert
             expect(publisher.gameName).toBe(gameName);
             expect(publisher.gameData).toBe(gameData);
-            expect(publisher.recentBetConsumer).toBe(recentBetConsumer);
         });
     });
 
@@ -78,22 +69,11 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(4); // player2, player3, player4, player5
-            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalledWith(
-                expect.objectContaining({ session: { system: Systems.Mobi } }),
-                expect.any(Array)
-            );
-        });
-
-        it("should call updateExchangeRateCode for each non-Mobi player", () => {
-            // Act
-            publisher.publish(recentBet);
-
-            // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player2, [recentBet]);
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player3, [recentBet]);
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBet]);
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBet]);
+            expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
+            expect(gameData.realPlayers.player2.socketClient.emit).toHaveBeenCalled();
+            expect(gameData.realPlayers.player3.socketClient.emit).toHaveBeenCalled();
+            expect(gameData.realPlayers.player4.socketClient.emit).toHaveBeenCalled();
+            expect(gameData.realPlayers.player5.socketClient.emit).toHaveBeenCalled();
         });
 
         it("should emit to socket for each non-Mobi player", () => {
@@ -128,7 +108,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player4, [recentBet]);
             expect(gameData.realPlayers.player4.socketClient.emit).toHaveBeenCalledWith(gameName, {
                 recentBet,
             });
@@ -139,7 +118,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player5, [recentBet]);
             expect(gameData.realPlayers.player5.socketClient.emit).toHaveBeenCalledWith(gameName, {
                 recentBet,
             });
@@ -153,7 +131,7 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
+            // No players to emit to, so no assertions needed
         });
 
         it("should handle undefined realPlayers", () => {
@@ -193,7 +171,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledTimes(3);
             expect(gameData.realPlayers.webPlayer.socketClient.emit).toHaveBeenCalledWith(gameName, {
                 recentBet,
             });
@@ -225,7 +202,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(recentBet);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).toHaveBeenCalledWith(gameData.realPlayers.player1, [recentBet]);
             expect(gameData.realPlayers.player1.socketClient.emit).toHaveBeenCalledWith(gameName, {
                 recentBet,
             });
@@ -244,7 +220,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(null);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
             expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
         });
 
@@ -261,7 +236,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(undefined);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
             expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
         });
 
@@ -278,7 +252,6 @@ describe("RecentBetPublisher", () => {
             publisher.publish(false);
 
             // Assert
-            expect(recentBetConsumer.updateExchangeRateCode).not.toHaveBeenCalled();
             expect(gameData.realPlayers.player1.socketClient.emit).not.toHaveBeenCalled();
         });
     });

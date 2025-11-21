@@ -355,26 +355,12 @@ describe("SettleCashOutConsumer", () => {
             });
 
             describe("and has recent bet", () => {
-                it("should publish recent bet with correct params", async () => {
+                it("should update recent bet with correct params", async () => {
                     // Arrange
                     betDetails.multiplier = 2;
-                    consumer.recentBetPublisher.publish = jest.fn();
                     consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
                     consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
-
-                    const recentBet = {
-                        name: realPlayer.profile.name,
-                        amount: betDetails.amount,
-                        baseAmount: 200,
-                        winningAmount: 200,
-                        baseWinningAmount: 200, // 100 * 1.0 * 2
-                        multiplier: betDetails.multiplier,
-                        rate: 1.0,
-                        time: new Date(),
-                        exchangeRateId: gameData.exchangeRates.exId,
-                        currency: realPlayer.session.currencyName,
-                    };
-                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue(recentBet);
+                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue();
 
                     // Act
                     await consumer.proceedCashOut(realPlayer);
@@ -386,23 +372,6 @@ describe("SettleCashOutConsumer", () => {
                         baseWinningAmount: 100, // 100 * 1.0
                         multiplier: betDetails.multiplier,
                     });
-                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledTimes(1);
-                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledWith(recentBet);
-                });
-            });
-
-            describe("and not has recent bet", () => {
-                it("should not publish recent bet when update returns null", async () => {
-                    // Arrange
-                    consumer.recentBetPublisher.publish = jest.fn();
-                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue(null);
-
-                    // Act
-                    await consumer.proceedCashOut(realPlayer);
-
-                    // Assert
-                    expect(consumer.recentBetConsumer.update).toHaveBeenCalled();
-                    expect(consumer.recentBetPublisher.publish).toHaveBeenCalledWith(null);
                 });
             });
         });

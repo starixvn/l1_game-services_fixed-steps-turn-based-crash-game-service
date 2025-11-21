@@ -1,20 +1,17 @@
 import Chance from "chance";
 import { helpers, logger } from "sc-common";
 import { Table } from "sc-game-base";
-import { Systems } from "sc-game-base/src/constants";
 import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
 import * as util from "util";
 import { Actions } from "../constants";
 import { RecentBetConsumer } from "../consumers";
-import { RecentBetPublisher } from "../event-publishers";
 import { getNextMultiplier } from "../helpers/crash-point-helper";
 
 export default class Bot extends Table.Crons.TableGameBot {
     /**
      * @param {RecentBetConsumer} recentBetConsumer
-     * @param {RecentBetPublisher} recentBetPublisher
      */
-    constructor(definition, gameData, publisher, userInfosRepository, recentBetConsumer, recentBetPublisher) {
+    constructor(definition, gameData, publisher, userInfosRepository, recentBetConsumer) {
         super(definition, gameData, publisher, userInfosRepository);
         this.chance = new Chance();
         this.activeBots = new Map();
@@ -22,7 +19,6 @@ export default class Bot extends Table.Crons.TableGameBot {
         this.maxBotsAtTheTable = 8;
         this.activeTimeouts = new Set();
         this.recentBetConsumer = recentBetConsumer;
-        this.recentBetPublisher = recentBetPublisher;
     }
 
     async run() {
@@ -87,8 +83,6 @@ export default class Bot extends Table.Crons.TableGameBot {
             const multiplier = result > firstMultiplier ? firstMultiplier : 0;
             user.profile = { name: user.name };
 
-            this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
-
             this.activeBots.set(botId, {
                 amount: betAmount,
                 result,
@@ -100,35 +94,17 @@ export default class Bot extends Table.Crons.TableGameBot {
 
             const rate = this.botRate;
             const baseAmount = betAmount * rate;
-            const recentBet = await this.recentBetConsumer.add(user, {
+            await this.recentBetConsumer.add(user, {
                 roundId: this.gameData.roundId,
                 amount: betAmount,
                 baseAmount,
                 rate,
             });
 
-            this.recentBetPublisher.publish(recentBet);
-
             if (multiplier === 0) {
                 await this.handleCashout(botId);
             }
         }
-    }
-
-    updateBalanceAndPublishBetPayload(botId, multiplier, amount, balance) {
-        if (this.gameData.players[botId]) {
-            this.gameData.players[botId].red = balance;
-        }
-
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerChip: {
-                playerId: botId,
-                rate: 1,
-                multiplier: multiplier,
-                amount: amount,
-                red: balance,
-            },
-        });
     }
 
     async handleBotActions(botId) {
@@ -193,9 +169,6 @@ export default class Bot extends Table.Crons.TableGameBot {
         botState.tapCount++;
         this.activeBots.set(botId, botState);
 
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerMine: { playerId: botId, multiplier: updatedMultiplier },
-        });
         const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
         if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
@@ -219,13 +192,12 @@ export default class Bot extends Table.Crons.TableGameBot {
             user.profile = { name: user.name };
         }
 
-        const recentBet = await this.recentBetConsumer.update({
+        await this.recentBetConsumer.update({
             roundId: this.gameData.roundId,
             winningAmount,
             baseWinningAmount,
             multiplier,
         });
-        this.recentBetPublisher.publish(recentBet);
 
         this.activeBots.delete(botId);
     }

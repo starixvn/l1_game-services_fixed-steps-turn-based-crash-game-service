@@ -74,7 +74,7 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             provablyFairConsumer: asClass(ProvablyFairConsumer).singleton(),
             gameResultServiceConsumer: asClass(GameResultServiceConsumer).singleton().proxy(),
             userDisconnectConsumer: asClass(UserDisconnectConsumer).singleton().proxy(),
-            recentBetConsumer: asClass(RecentBetConsumer).singleton(),
+            recentBetConsumer: asClass(RecentBetConsumer).singleton().proxy(),
         });
     }
 

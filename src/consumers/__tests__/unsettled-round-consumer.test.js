@@ -14,6 +14,10 @@ roundsRepository.deleteOne = jest.fn();
 const betLogsRepository = stubMongoose(mongoose.Model);
 
 /** @type {mongoose.Model}*/
+const recentBetsRepository = stubMongoose(mongoose.Model);
+recentBetsRepository.deleteOne = jest.fn();
+
+/** @type {mongoose.Model}*/
 const roundRmRepository = stubMongoose(mongoose.Model);
 roundRmRepository.create = jest.fn();
 
@@ -32,6 +36,7 @@ function initConsumer() {
         gameData,
         roundsRepository,
         betLogsRepository,
+        recentBetsRepository,
         settleCashOutConsumer,
         roundRmRepository,
     });
@@ -155,6 +160,7 @@ describe("unsettledRoundConsumer", () => {
                 });
 
                 roundsRepository.deleteOne.mockResolvedValue({});
+                recentBetsRepository.deleteOne.mockResolvedValue({});
 
                 betLogsRepository.find.mockReturnValue({
                     lean: jest.fn().mockReturnValue({
@@ -173,6 +179,7 @@ describe("unsettledRoundConsumer", () => {
                 expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalled();
                 expect(roundRmRepository.create).toHaveBeenCalledWith(unsettledRounds[0]);
                 expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "round-1" });
+                expect(recentBetsRepository.deleteOne).toHaveBeenCalledWith({ roundId: "round-1" });
             });
 
             it("should handle multiple unsettled rounds", async () => {
@@ -362,6 +369,7 @@ describe("unsettledRoundConsumer", () => {
                 });
 
                 roundsRepository.deleteOne.mockResolvedValue({});
+                recentBetsRepository.deleteOne.mockResolvedValue({});
 
                 betLogsRepository.find.mockImplementation(({ roundId }) => ({
                     lean: jest.fn().mockReturnValue({
@@ -464,6 +472,19 @@ describe("unsettledRoundConsumer", () => {
                 expect(roundsRepository.deleteOne).toHaveBeenCalledTimes(2);
                 expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "r2" });
                 expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "r4" });
+            });
+
+            it("should delete recent bets for rounds without bet logs from recentBetsRepository", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(recentBetsRepository.deleteOne).toHaveBeenCalledTimes(2);
+                expect(recentBetsRepository.deleteOne).toHaveBeenCalledWith({ roundId: "r2" });
+                expect(recentBetsRepository.deleteOne).toHaveBeenCalledWith({ roundId: "r4" });
             });
 
             it("should not call settleCashOutConsumer for rounds without bet logs", async () => {

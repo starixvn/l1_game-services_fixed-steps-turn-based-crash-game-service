@@ -5,14 +5,15 @@ export class UnsettledRoundConsumer {
      * @param {GameData} dependencies.gameData
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {mongoose.Model} dependencies.betLogsRepository
+     * @param {mongoose.Model} dependencies.recentBetsRepository
      * @param {SettleCashOutConsumer} dependencies.settleCashOutConsumer
      * @param {mongoose.Model} dependencies.roundRmRepository
      */
-    constructor({ gameData, roundsRepository, betLogsRepository, settleCashOutConsumer, roundRmRepository }) {
+    constructor({ gameData, roundsRepository, betLogsRepository, recentBetsRepository, settleCashOutConsumer, roundRmRepository }) {
         this.gameData = gameData;
         this.roundsRepository = roundsRepository;
         this.betLogsRepository = betLogsRepository;
-
+        this.recentBetsRepository = recentBetsRepository;
         this.settleCashOutConsumer = settleCashOutConsumer;
         this.roundRmRepository = roundRmRepository;
     }
@@ -31,6 +32,8 @@ export class UnsettledRoundConsumer {
                 if (isBetLogNotExisted) {
                     await this.roundRmRepository.create(round);
                     await this.roundsRepository.deleteOne({ id: round.id });
+                    await this.recentBetsRepository.deleteOne({ roundId: round.id });
+
                     return;
                 }
 

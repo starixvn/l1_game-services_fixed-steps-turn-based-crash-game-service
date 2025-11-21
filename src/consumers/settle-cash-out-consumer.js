@@ -57,13 +57,12 @@ export class SettleCashOutConsumer {
 
         const rate = this.calculateCurrencyRate(player.session);
         const baseWinningAmount = winningAmount * rate;
-        const recentBet = await this.recentBetConsumer.update({
+        await this.recentBetConsumer.update({
             roundId,
             winningAmount,
             baseWinningAmount,
             multiplier,
         });
-        this.recentBetPublisher.publish(recentBet);
         return { player, multiplier, roundId, tapCount, amount };
     }
 
