@@ -13,17 +13,6 @@ export default {
         placeBetTimeout: 10000,
         enabledApiLogs: true,
     },
-    authenticateSettings: {
-        url: "http://l2-auth-api-sit1-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l2-user-service-sit1-service:5000",
-    },
     socketOptions: {
         pingInterval: 60 * 1000,
         pingTimeout: 60 * 1000,
@@ -41,25 +30,30 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "http://8ac47fca6d3e4a41908896a64ef201ac@10.2.190.51:9009/53",
+        sentryUrl: "http://8eb9632f2663e57c838ec83febbee14f@sentrysc.ops-sit.nebula.sit/4",
         logIdentifier: "crashgame",
         env: "SIT_1",
     },
+    authenticateSettings: {
+        url: "http://l2-auth-api-sit1-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l2-user-service-sit1-service:5000",
+    },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
-    enableCorsWs: true,
-    corsUrls: [
-        "http://l2sit.sgamesuat.com",
-        "https://l2sit.sgamesuat.com",
-        "http://l2sitadm.sgamesuat.com",
-        "https://l2sitadm.sgamesuat.com",
-        "http://l2sitm.sgamesuat.com",
-        "https://l2sitm.sgamesuat.com",
-    ],
     metrics: {
         enable: true,
         secretKey: "6c1f0f28-70f2-46ae-b031-22624a6cd8df",
     },
     enableMsgpackParser: true,
+    gameManagementApiSettings: {
+        BASE: "http://l2-game-management-service-sit1-service:5000",
+    },
     otel: {
         system: "VG",
         enabled: true,

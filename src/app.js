@@ -6,8 +6,8 @@ import ContainerRegistry from "./container-registry";
 import CrashGameData from "./game-data";
 import gameSettings from "./game-settings";
 import { logger } from "sc-common";
-import { gameConfigs as gameConfigsRepository } from "sc-base-database";
 import { generateRawResultForHash, generateResult, getSettlementResult } from "./helpers/result-helper";
+import GameManagementApiClientFactory from "sc-game-base/src/core/game-management-api";
 
 const run = async () => {
     const appName = process.env.APP_NAME;
@@ -21,13 +21,16 @@ const run = async () => {
     }
 
     if (appName) {
-        appConfigs.database.url = appConfigs.database.url.concat(`&appName=${gameName.toLowerCase()}`);
-        appConfigs.sentry.logIdentifier = gameName.toLowerCase();
+        const gameConfigName = gameName.toLowerCase();
+        appConfigs.database.url = appConfigs.database.url.concat(`&appName=${gameConfigName}`);
+        appConfigs.sentry.logIdentifier = gameConfigName;
 
         const app = new Core.BaseGameApp(gameName, appConfigs);
         await app.run();
 
-        const gameConfigs = await gameConfigsRepository.findOne({ name: gameName.toLowerCase() }).lean().exec();
+        const gameManagementClient = new GameManagementApiClientFactory(appConfigs).instance();
+        const gameConfigResponse = await gameManagementClient.gameConfigs.getGameConfigs(gameConfigName);
+        const gameConfigs = gameConfigResponse.isSuccessful ? gameConfigResponse.data : null;
 
         if (gameConfigs) {
             gameSettings.id = gameConfigs.gameId;

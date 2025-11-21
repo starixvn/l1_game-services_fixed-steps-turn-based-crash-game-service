@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 export default function (gameConfigName) {
     const recentBetSchema = new mongoose.Schema({
-        uid: { type: String, required: true },
+        uid: { type: String },
         name: { type: String, required: true },
         roundId: { type: Number, required: true },
         amount: { type: Number, required: true },

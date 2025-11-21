@@ -9,8 +9,17 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
      * @param {RecentBetConsumer} dependencies.recentBetConsumer
      */
 
-    constructor({ definition, gameData, roundQuery, publisher, getBalance, userInfosRepository, provablyFairConsumer, recentBetConsumer }) {
-        super(definition, gameData, roundQuery, publisher, getBalance, userInfosRepository);
+    constructor({
+        definition,
+        gameData,
+        roundQuery,
+        publisher,
+        getBalance,
+        gameManagementApiClientFactory,
+        provablyFairConsumer,
+        recentBetConsumer,
+    }) {
+        super(definition, gameData, roundQuery, publisher, getBalance, gameManagementApiClientFactory);
         this.provablyFairConsumer = provablyFairConsumer;
         this.recentBetConsumer = recentBetConsumer;
     }
@@ -35,6 +44,7 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
     }
 
     async buildPayload(realPlayer) {
+        const user = await this.getUserInfo(realPlayer);
         const { session } = realPlayer;
 
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === session.currencyGroupId);
@@ -49,11 +59,8 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
             fixedStepsMultiplierConfigs: crashConfig.fixedStepsMultiplierConfigs,
         };
         const players = realPlayer.session?.system === Systems.Mobi ? {} : this.buildPlayersPayload(realPlayer);
-
-        await this.getBalance(realPlayer, true);
-
-        const user = await this.getUserInfo(realPlayer.UID);
         const recentBets = await this.recentBetConsumer.getRecentBets(realPlayer);
+
         return {
             gameConfigs,
             user,

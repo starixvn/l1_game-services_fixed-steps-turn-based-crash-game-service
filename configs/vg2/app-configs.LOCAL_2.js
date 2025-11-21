@@ -10,19 +10,8 @@ export default {
         },
         useAuthenticate: true,
         requestTimeout: 10000,
-        placeBetTimeout: 10000,
+        placeBetTimeout: 4000,
         enabledApiLogs: true,
-    },
-    authenticateSettings: {
-        url: "http://l2-auth-api-local2-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l2-user-service-local2-service:5000",
     },
     socketOptions: {
         pingInterval: 60 * 1000,
@@ -41,9 +30,20 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "https://acb36eb835d948d68c1aad9873754d51@sentry.lumigame.com/27",
+        sentryUrl: "https://8eb9632f2663e57c838ec83febbee14f@sentry-k8s.lumigame.com/4",
         logIdentifier: "crashgame",
-        env: "local_2",
+        env: "LOCAL_2",
+    },
+    authenticateSettings: {
+        url: "http://l2-auth-api-local2-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l2-user-service-local2-service:5000",
     },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
     metrics: {
@@ -51,15 +51,6 @@ export default {
         secretKey: "6c1f0f28-70f2-46ae-b031-22624a6cd8df",
     },
     enableMsgpackParser: false,
-    chatBotSettings: {
-        url: "https://bot.nexdev.net/skynex/api/messages/",
-        token: "0A40aOc7CtpzjbBSJu8KNWQRoXyjRvf9",
-        requestTimeout: 5000,
-        conversationIds: {
-            boostedOdds: -1001829659553,
-        },
-    },
-    enabledBoostedOdds: true,
     gameResultSettings: {
         baseUrl: "http://l2-game-result-local2-service:5000",
         id: "Game Service",

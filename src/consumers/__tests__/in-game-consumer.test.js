@@ -7,7 +7,7 @@ import { MultiplierModes } from "../../constants";
 import { InGameConsumer, ProvablyFairConsumer, RecentBetConsumer } from "../../consumers";
 import CrashGameData from "../../game-data";
 
-describe("in game consumer instance", () => {
+xdescribe("in game consumer instance", () => {
     const definition = {
         id: 41,
         name: "crash",

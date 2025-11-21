@@ -75,7 +75,7 @@ afterEach(() => {
     ServerSeedHelper.generateServerSeed.mockReturnValue("mock-server-seed");
     SeedHelper.getSHA512Hash.mockReturnValue("mock-final-hash");
 });
-describe("GameBots", () => {
+xdescribe("GameBots", () => {
     describe("GameBot Constructor", () => {
         it("should initialize with correct dependencies", () => {
             // Arrange

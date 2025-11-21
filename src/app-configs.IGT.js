@@ -3,7 +3,7 @@ import appConfigs from "./app-configs";
 export default Object.assign(appConfigs, {
     hostingPort: 5001,
     authenticateSettings: {
-        url: "http://l1_auth_api_local:5000",
+        url: "https://auth.lumigame.com",
         id: "game-services",
         secret: "gameservices@20luminet&",
         requestTimeout: 3000,
@@ -11,7 +11,7 @@ export default Object.assign(appConfigs, {
         audiences: ["api", "admin-api"],
     },
     database: {
-        url: "mongodb://127.0.0.1:27017",
+        url: "mongodb://0.0.0.0:27017",
         options: {
             dbName: "game-service-test-db",
             useNewUrlParser: true,

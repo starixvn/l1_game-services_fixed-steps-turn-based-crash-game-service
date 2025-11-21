@@ -6,12 +6,10 @@ export default class RecentBetConsumer {
     /**
      * @param {mongoose.Model} recentBetsRepository
      * @param {GameData} gameData
-     * @param {mongoose.Model} exchangeRatesRepository
      */
-    constructor(recentBetsRepository, gameData, exchangeRatesRepository) {
+    constructor(recentBetsRepository, gameData) {
         this.recentBetsRepository = recentBetsRepository;
         this.gameData = gameData;
-        this.exchangeRatesRepository = exchangeRatesRepository;
     }
     /**
      * @param {Object} player
@@ -32,12 +30,10 @@ export default class RecentBetConsumer {
             exchangeRateId: this.gameData.exchangeRates.exId,
         };
 
-        const document = {
-            uid: player.UID,
-            ...recentBet,
-        };
+        const document = { ...recentBet };
 
         if (!!player.session) {
+            document.uid = player.UID;
             document.currency = player.session.currencyName;
             document.operatorId = player.session.operatorId;
             document.playerId = player.session.playerId;
@@ -76,20 +72,7 @@ export default class RecentBetConsumer {
         if (recentBets.length === 0) {
             return [];
         }
-        await this.updateExchangeRateCode(realPlayer, recentBets);
         return recentBets.reverse();
-    }
-
-    /**
-     * @param {Object} realPlayer
-     * @param {Object[]} bets
-     */
-    async updateExchangeRateCode(realPlayer, bets) {
-        const exchangeRates = await this.getExchangeRates(bets.map((bet) => bet.exchangeRateId));
-        const { session } = realPlayer;
-        for (const bet of bets) {
-            this.updateRecentBetExchangeRateCode(bet, session.currencyCode, exchangeRates);
-        }
     }
 
     updateRecentBetExchangeRateCode(bet, currencyCode, exchangeRates) {
@@ -101,22 +84,5 @@ export default class RecentBetConsumer {
         bet.exchangeRateCode = {
             [currencyCode]: parseFloat(exchangeRate.code[currencyCode]),
         };
-    }
-
-    /**
-     * @param {number[]} exIds
-     * @returns {Object[]}
-     */
-    async getExchangeRates(exIds) {
-        const filter = {
-            exId: { $in: exIds },
-        };
-        const projection = {
-            _id: false,
-            exId: true,
-            code: true,
-        };
-
-        return this.exchangeRatesRepository.find(filter, projection).lean().exec();
     }
 }

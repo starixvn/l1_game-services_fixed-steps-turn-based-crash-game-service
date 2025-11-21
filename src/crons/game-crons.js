@@ -1,70 +1,7 @@
 import { Core } from "sc-game-base";
-import { SettleCashOutConsumer } from "../consumers";
-import { UnsettledRoundConsumer } from "../consumers/unsettled-round-consumer";
 export default class GameCron extends Core.Crons.BaseGameCron {
-    /**
-     * @param {Object} dependencies
-     * @param {SettleCashOutConsumer} dependencies.settleCashOutConsumer
-     * @param {UnsettledRoundConsumer} dependencies.unsettledRoundConsumer
-     */
-    constructor({
-        definition,
-        gameData,
-        bot,
-        settleGameRoundConsumer,
-        gameStatusPublisher,
-        runningRoundInfoPublisher,
-        logService,
-        gameConfigsRepository,
-        roundsRepository,
-        archiveStatusesRepository,
-        notificationRepository,
-        exchangeRatesRepository,
-        currencyGroupGamesRepository,
-        partnerConfigRepository,
-        currencyGroupRepository,
-        currencyRepository,
-        roundResultConsumer,
-        resultsRepository,
-        promotionRepository,
-        appConfigs,
-        provablyFairConsumer,
-        unsettledRoundConsumer,
-        betsRepository,
-        betLogsRepository,
-        settleCashOutConsumer,
-    }) {
-        super({
-            definition,
-            gameData,
-            bot,
-            settleGameRoundConsumer,
-            gameStatusPublisher,
-            runningRoundInfoPublisher,
-            logService,
-            gameConfigsRepository,
-            roundsRepository,
-            archiveStatusesRepository,
-            notificationRepository,
-            exchangeRatesRepository,
-            currencyGroupGamesRepository,
-            partnerConfigRepository,
-            currencyGroupRepository,
-            currencyRepository,
-            roundResultConsumer,
-            resultsRepository,
-            promotionRepository,
-            appConfigs,
-            provablyFairConsumer,
-            unsettledRoundConsumer,
-        });
-        this.betsRepository = betsRepository;
-        this.betLogsRepository = betLogsRepository;
-        this.settleCashOutConsumer = settleCashOutConsumer;
-        this.unsettledRoundConsumer = unsettledRoundConsumer;
-    }
     async start() {
-        await this.initRoundId();
+        await this.roundIdConsumer.initRoundId();
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
         await this.unsettledRoundConsumer.proceed();

@@ -1,7 +1,6 @@
 import Chance from "chance";
 import { helpers, logger } from "sc-common";
 import { Table } from "sc-game-base";
-import { Systems } from "sc-game-base/src/constants";
 import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
 import * as util from "util";
 import { Actions } from "../constants";
@@ -14,8 +13,16 @@ export default class Bot extends Table.Crons.TableGameBot {
      * @param {RecentBetConsumer} recentBetConsumer
      * @param {RecentBetPublisher} recentBetPublisher
      */
-    constructor(definition, gameData, publisher, userInfosRepository, recentBetConsumer, recentBetPublisher) {
-        super(definition, gameData, publisher, userInfosRepository);
+    constructor(
+        definition,
+        gameData,
+        publisher,
+        gameManagementApiClientFactory,
+        tempBetsRepository,
+        recentBetConsumer,
+        recentBetPublisher
+    ) {
+        super(definition, gameData, publisher, gameManagementApiClientFactory, tempBetsRepository);
         this.chance = new Chance();
         this.activeBots = new Map();
         this.minBotsAtTheTable = 4;
@@ -67,11 +74,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         const minBet = this.getMinBet();
         const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, false));
 
-        const user = await this.userInfosRepository.findOneAndUpdate(
-            { id: botId, red: { $gt: betAmount } },
-            { $inc: { red: -betAmount } },
-            { new: true, lean: true }
-        );
+        const user = this.botsInRoom[botId];
 
         if (user) {
             this.gameData.roundId += 1;
@@ -85,9 +88,6 @@ export default class Bot extends Table.Crons.TableGameBot {
             );
             const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
             const multiplier = result > firstMultiplier ? firstMultiplier : 0;
-            user.profile = { name: user.name };
-
-            this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
 
             this.activeBots.set(botId, {
                 amount: betAmount,
@@ -100,35 +100,21 @@ export default class Bot extends Table.Crons.TableGameBot {
 
             const rate = this.botRate;
             const baseAmount = betAmount * rate;
-            const recentBet = await this.recentBetConsumer.add(user, {
-                roundId: this.gameData.roundId,
-                amount: betAmount,
-                baseAmount,
-                rate,
-            });
-
+            const recentBet = await this.recentBetConsumer.add(
+                { profile: { name: user.name } },
+                {
+                    roundId: this.gameData.roundId,
+                    amount: betAmount,
+                    baseAmount,
+                    rate,
+                }
+            );
             this.recentBetPublisher.publish(recentBet);
 
             if (multiplier === 0) {
                 await this.handleCashout(botId);
             }
         }
-    }
-
-    updateBalanceAndPublishBetPayload(botId, multiplier, amount, balance) {
-        if (this.gameData.players[botId]) {
-            this.gameData.players[botId].red = balance;
-        }
-
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerChip: {
-                playerId: botId,
-                rate: 1,
-                multiplier: multiplier,
-                amount: amount,
-                red: balance,
-            },
-        });
     }
 
     async handleBotActions(botId) {
@@ -193,9 +179,6 @@ export default class Bot extends Table.Crons.TableGameBot {
         botState.tapCount++;
         this.activeBots.set(botId, botState);
 
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerMine: { playerId: botId, multiplier: updatedMultiplier },
-        });
         const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
         if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
@@ -211,13 +194,6 @@ export default class Bot extends Table.Crons.TableGameBot {
         const amount = botState.amount;
         const winningAmount = multiplier * amount;
         const baseWinningAmount = winningAmount * rate;
-
-        const user = await this.userInfosRepository.findOneAndUpdate({ id: botId }, { $inc: { red: +winningAmount } });
-
-        if (this.gameData.players[botId]) {
-            this.gameData.players[botId].red = user.red;
-            user.profile = { name: user.name };
-        }
 
         const recentBet = await this.recentBetConsumer.update({
             roundId: this.gameData.roundId,

@@ -13,17 +13,6 @@ export default {
         requestTimeout: 10000, // 10s
         enabledApiLogs: true,
     },
-    authenticateSettings: {
-        url: "http://l1-auth-api-klprod-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l1-user-service-klprod-service:5000",
-    },
     socketOptions: {
         pingInterval: 60 * 1000,
         pingTimeout: 60 * 1000,
@@ -41,31 +30,30 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "http://58fc00e79ab34a3bab04a79038760cb8@sentry-scklprod-ovs.ops-klprod.gamora.prod/8",
+        sentryUrl: "http://50e405ebce7003a0e1edbda2bf28b14c@sentrypro-sc.ops-klprod.gamora.prod/3",
         logIdentifier: "crashgame",
         env: "PROD",
     },
+    authenticateSettings: {
+        url: "http://l1-auth-api-klprod-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l1-user-service-klprod-service:5000",
+    },
     adminSecretKey: "asWDEer4yGdgsdqR4uqmKQZgh",
-    enableCorsWs: true,
-    corsUrls: [
-        "http://sabagaming.com",
-        "http://www.sabagaming.com",
-        "https://sabagaming.com",
-        "https://www.sabagaming.com",
-        "https://www.gamesaba.com",
-        "https://gamesaba.com",
-        "http://www.gamesaba.com",
-        "http://gamesaba.com",
-        "http://admg.sabagaming.com",
-        "https://admg.sabagaming.com",
-        "http://adm.sabagaming.com",
-        "https://adm.sabagaming.com",
-    ],
     metrics: {
         enable: true,
         secretKey: "30d15293-c7de-4c77-9293-b85d6c5bfe1a",
     },
     enableMsgpackParser: true,
+    gameManagementApiSettings: {
+        BASE: "http://l1-game-management-service-klprod-service:5000",
+    },
     otel: {
         system: "SG",
         enabled: true,

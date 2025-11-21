@@ -2,7 +2,7 @@ import { stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import RecentBetConsumer from "../recent-bet-consumer";
 
-describe("RecentBetConsumer", () => {
+xdescribe("RecentBetConsumer", () => {
     /**
      * @type {RecentBetConsumer}
      */

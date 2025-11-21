@@ -1,5 +1,5 @@
 import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
-import { decrypt, encrypt } from "../helpers/crypto-helper";
+import { encrypt } from "../helpers/crypto-helper";
 import { roundFloat } from "../helpers/number-helper";
 
 export class ProvablyFairConsumer {

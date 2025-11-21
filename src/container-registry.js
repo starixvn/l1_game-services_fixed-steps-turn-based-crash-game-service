@@ -1,9 +1,7 @@
 import awilix from "awilix";
 import { Table } from "sc-game-base";
-import { MaxCombinedClientSeeds } from "./constants";
 import {
     CashOutConsumer,
-    GameResultServiceConsumer,
     InGameConsumer,
     MineConsumer,
     PlaceBetConsumer,
@@ -14,15 +12,8 @@ import {
     UnsettledRoundConsumer,
     UserDisconnectConsumer,
 } from "./consumers";
-import Bot from "./crons/bot";
-import GameCrons from "./crons/game-crons";
-import ProcessBetQueue from "./crons/process-bet-queue";
-import {
-    PlaceBetPublisher,
-    RecentBetPublisher,
-    RoundResultPublisher,
-    UserBetResultPublisher,
-} from "./event-publishers";
+import { GameCrons, Bot, ProcessBetQueue } from "./crons";
+import { PlaceBetPublisher, RecentBetPublisher, RoundResultPublisher, UserBetResultPublisher } from "./event-publishers";
 import { BetLogs, RecentBets, Results, Rounds, umInfo } from "./models";
 import { HistoryQuery } from "./query-apis";
 import { HttpRouter, SocketRouter } from "./routers";
@@ -37,12 +28,6 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
         this.registerPFSettings();
 
         return this.container;
-    }
-
-    registerPFSettings() {
-        this.container.register({
-            maxCombinedClientSeeds: asValue(MaxCombinedClientSeeds),
-        });
     }
 
     registerWatchers() {
@@ -76,7 +61,6 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             settleCashOutConsumer: asClass(SettleCashOutConsumer).singleton().proxy(),
             unsettledRoundConsumer: asClass(UnsettledRoundConsumer).singleton().proxy(),
             provablyFairConsumer: asClass(ProvablyFairConsumer).singleton(),
-            gameResultServiceConsumer: asClass(GameResultServiceConsumer).singleton().proxy(),
             userDisconnectConsumer: asClass(UserDisconnectConsumer).singleton().proxy(),
             recentBetConsumer: asClass(RecentBetConsumer).singleton(),
         });

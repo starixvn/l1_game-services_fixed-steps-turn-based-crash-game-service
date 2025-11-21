@@ -12,9 +12,9 @@ export default class SocketRouter extends Routers.BaseSocketRouter {
         historyQuery,
         logService,
         playGamePermissionValidator,
-        cashOutConsumer,
         roundQuery,
         gameResultServiceConsumer,
+        cashOutConsumer,
     }) {
         super({
             definition,
@@ -28,17 +28,16 @@ export default class SocketRouter extends Routers.BaseSocketRouter {
             logService,
             playGamePermissionValidator,
             roundQuery,
+            gameResultServiceConsumer,
         });
 
         this.cashOutConsumer = cashOutConsumer;
-        this.gameResultServiceConsumer = gameResultServiceConsumer;
     }
 
     init(socketClient) {
         super.init(socketClient);
 
         this.socketClient.on("cashOut", this.handleCashOut.bind(this));
-        this.socketClient.on("betDetails", this.handleBetDetails.bind(this));
         this.socketClient.on("getProvablyFair", this.getProvablyFair.bind(this));
     }
 
@@ -69,33 +68,6 @@ export default class SocketRouter extends Routers.BaseSocketRouter {
             );
 
             this.socketClient.emit(this.definition.name, { [responseKey]: history.history });
-        } catch (error) {
-            this.logService.logError(error);
-        }
-    }
-
-    async handleBetDetails(payload) {
-        try {
-            if (!this.verify()) {
-                return;
-            }
-
-            const { playerId, operatorId, siteId } = this.gameData.realPlayers[this.socketClient.id].session;
-            const { mode, timeZoneOffset, roundId, language } = payload;
-
-            const result = await this.gameResultServiceConsumer.getUrl({
-                playerId,
-                operatorId,
-                siteId,
-                roundId,
-                mode,
-                timeZoneOffset,
-                language,
-            });
-
-            if (result.isAuthenticated) {
-                this.socketClient.emit(this.definition.name, { betDetailsUrl: result.redirectUrl });
-            }
         } catch (error) {
             this.logService.logError(error);
         }

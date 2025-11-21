@@ -13,17 +13,6 @@ export default {
         requestTimeout: 10000, // 10s
         enabledApiLogs: true,
     },
-    authenticateSettings: {
-        url: "http://l2-auth-api-klprod-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l2-user-service-klprod-service:5000",
-    },
     socketOptions: {
         pingInterval: 60 * 1000,
         pingTimeout: 60 * 1000,
@@ -41,31 +30,30 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "http://2b5b82bf699543ddb296364568bc30be@sentry-scklprod-ovs.ops-klprod.gamora.prod/52",
+        sentryUrl: "http://8eb9632f2663e57c838ec83febbee14f@sentrypro-sc.ops-klprod.gamora.prod/4",
         logIdentifier: "crashgame",
         env: "PROD",
     },
+    authenticateSettings: {
+        url: "http://l2-auth-api-klprod-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l2-user-service-klprod-service:5000",
+    },
     adminSecretKey: "asWDEer4yGdgsdqR4uqmKQZgh",
-    enableCorsWs: true,
-    corsUrls: [
-        "https://vgaming88.net",
-        "https://www.vgaming88.net",
-        "http://vgaming88.net",
-        "http://www.vgaming88.net",
-        "https://gamesaba.net",
-        "https://www.gamesaba.net",
-        "http://gamesaba.net",
-        "http://www.gamesaba.net",
-        "http://admg.vgaming88.net",
-        "https://admg.vgaming88.net",
-        "http://adm.vgaming88.net",
-        "https://adm.vgaming88.net",
-    ],
     metrics: {
         enable: true,
         secretKey: "30d15293-c7de-4c77-9293-b85d6c5bfe1a",
     },
     enableMsgpackParser: true,
+    gameManagementApiSettings: {
+        BASE: "http://l2-game-management-service-klprod-service:5000",
+    },
     otel: {
         system: "VG",
         enabled: true,

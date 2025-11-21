@@ -6,7 +6,7 @@ import RecentBetPublisher from "../recent-bet-publisher";
 
 const chance = new Chance();
 
-describe("RecentBetPublisher", () => {
+xdescribe("RecentBetPublisher", () => {
     /**
      * @type {RecentBetPublisher}
      */

@@ -15,6 +15,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
         endGame,
         roundsRepository,
         betsRepository,
+        gameManagementApiClientFactory,
         betLogsRepository,
         logService,
         provablyFairConsumer,
@@ -28,6 +29,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
             endGame,
             roundsRepository,
             betsRepository,
+            gameManagementApiClientFactory,
         });
 
         this.betLogsRepository = betLogsRepository;

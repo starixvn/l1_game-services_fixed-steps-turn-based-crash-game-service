@@ -10,8 +10,29 @@ export default {
         },
         useAuthenticate: true,
         requestTimeout: 10000,
-        placeBetTimeout: 10000,
+        placeBetTimeout: 4000,
         enabledApiLogs: true,
+    },
+    socketOptions: {
+        pingInterval: 60 * 1000,
+        pingTimeout: 60 * 1000,
+        transports: ["websocket"],
+        allowUpgrades: false,
+        perMessageDeflate: false,
+    },
+    enabledLogs: true,
+    database: {
+        url: "mongodb://lmn_backend:LmnBackend@10.10.50.12:39200,10.10.50.13:39200,10.10.50.14:39200/?replicaSet=L2Local&appName=crashgame",
+        options: {
+            dbName: "minigame",
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        },
+    },
+    sentry: {
+        sentryUrl: "https://8eb9632f2663e57c838ec83febbee14f@sentry-k8s.lumigame.com/4",
+        logIdentifier: "crashgame",
+        env: "LOCAL",
     },
     authenticateSettings: {
         url: "http://l2-auth-api-local-service:5000",
@@ -24,33 +45,14 @@ export default {
     userServiceSettings: {
         url: "http://l2-user-service-local-service:5000",
     },
-    socketOptions: {
-        pingInterval: 60 * 1000,
-        pingTimeout: 60 * 1000,
-        transports: ["websocket"],
-        allowUpgrades: false,
-        perMessageDeflate: false,
-    },
-    enabledLogs: true,
-    database: {
-        url: "mongodb://lmn_backend:LmnBackend@10.10.50.13:37101/?replicaSet=L2Local&appName=crashgame",
-        options: {
-            dbName: "minigame",
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        },
-    },
-    sentry: {
-        sentryUrl: "https://acb36eb835d948d68c1aad9873754d51@sentry.lumigame.com/27",
-        logIdentifier: "crashgame",
-        env: "LOCAL",
-    },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
-    enableCorsWs: false,
-    corsUrls: ["http://localhost:7456", "https://l2-games.lumigame.com", "https://l2-admin.lumigame.com", "http://localhost:7000"],
     metrics: {
         enable: true,
         secretKey: "6c1f0f28-70f2-46ae-b031-22624a6cd8df",
+    },
+    enableMsgpackParser: false,
+    gameManagementApiSettings: {
+        BASE: "http://l2-game-management-service-local-service:5000",
     },
     otel: {
         system: "VG",

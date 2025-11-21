@@ -10,19 +10,8 @@ export default {
         },
         useAuthenticate: true,
         requestTimeout: 10000,
-        placeBetTimeout: 10000,
+        placeBetTimeout: 4000,
         enabledApiLogs: true,
-    },
-    authenticateSettings: {
-        url: "http://l1-auth-api-local-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l1-user-service-local-service:5000",
     },
     socketOptions: {
         pingInterval: 60 * 1000,
@@ -41,16 +30,29 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "https://13f39b8359404ed5aec23655e64ccf78@sentry.lumigame.com/2",
+        sentryUrl: "https://50e405ebce7003a0e1edbda2bf28b14c@sentry-k8s.lumigame.com/3",
         logIdentifier: "crashgame",
         env: "LOCAL",
     },
+    authenticateSettings: {
+        url: "http://l1-auth-api-local-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l1-user-service-local-service:5000",
+    },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
-    enableCorsWs: false,
-    corsUrls: ["https://localhost:7456", "https://localhost:7000", "https://games.lumigame.com", "https://admin.lumigame.com"],
     metrics: {
         enable: true,
         secretKey: "6c1f0f28-70f2-46ae-b031-22624a6cd8df",
+    },
+    enableMsgpackParser: false,
+    gameManagementApiSettings: {
+        BASE: "http://l1-game-management-service-local-service:5000",
     },
     otel: {
         system: "SG",

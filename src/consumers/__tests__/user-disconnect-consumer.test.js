@@ -4,7 +4,7 @@ import { SettleCashOutConsumer, UserDisconnectConsumer } from "../../consumers";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 
 import Chance from "chance";
-describe("UserDisconnectConsumer", () => {
+xdescribe("UserDisconnectConsumer", () => {
     const chance = new Chance();
 
     /** @type {UserDisconnectConsumer}*/

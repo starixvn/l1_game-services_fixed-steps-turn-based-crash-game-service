@@ -13,17 +13,6 @@ export default {
         requestTimeout: 10000, // 10s
         enabledApiLogs: true,
     },
-    authenticateSettings: {
-        url: "http://l1-auth-api-uat-service:5000",
-        id: "game-services",
-        secret: "gameservices@20luminet&",
-        requestTimeout: 10000,
-        useAuthenticate: true,
-        audiences: ["api", "admin-api"],
-    },
-    userServiceSettings: {
-        url: "http://l1-user-service-uat-service:5000",
-    },
     socketOptions: {
         pingInterval: 60 * 1000,
         pingTimeout: 60 * 1000,
@@ -41,23 +30,30 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "http://52368c4019044019885440599c180bda@10.2.190.51:9009/24",
-        logIdentifier: "crash-game",
+        sentryUrl: "http://50e405ebce7003a0e1edbda2bf28b14c@sentrysc.ops-kluat.gamora.prod/3",
+        logIdentifier: "crashgame",
         env: "UAT",
     },
+    authenticateSettings: {
+        url: "http://l1-auth-api-uat-service:5000",
+        id: "game-services",
+        secret: "gameservices@20luminet&",
+        requestTimeout: 10000,
+        useAuthenticate: true,
+        audiences: ["api", "admin-api"],
+    },
+    userServiceSettings: {
+        url: "http://l1-user-service-uat-service:5000",
+    },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
-    enableCorsWs: true,
-    corsUrls: [
-        "http://l1uat.sgamesuat.com",
-        "https://l1uat.sgamesuat.com",
-        "http://l1uatadm.sgamesuat.com",
-        "https://l1uatadm.sgamesuat.com",
-    ],
     metrics: {
         enable: true,
         secretKey: "6c1f0f28-70f2-46ae-b031-22624a6cd8df",
     },
     enableMsgpackParser: true,
+    gameManagementApiSettings: {
+        BASE: "http://l1-game-management-service-uat-service:5000",
+    },
     otel: {
         system: "SG",
         enabled: true,

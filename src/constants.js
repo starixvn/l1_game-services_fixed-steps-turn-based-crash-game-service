@@ -11,8 +11,6 @@ const MinMultiplierValue = 1.01;
 
 const MaxDeltaTime = 60000;
 
-const MaxCombinedClientSeeds = 5;
-
 const ClientSeedRange = { min: 0, max: 9999 };
 
 const Chips = [
@@ -26,5 +24,4 @@ const MultiplierModes = {
     Hardcore: 4,
 };
 
-export { Actions, Chips, ClientSeedRange, MaxCombinedClientSeeds, MaxDeltaTime, MinMultiplierValue, MultiplierModes };
-
+export { Actions, Chips, ClientSeedRange, MaxDeltaTime, MinMultiplierValue, MultiplierModes };

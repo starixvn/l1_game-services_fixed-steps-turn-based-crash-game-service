@@ -3,13 +3,12 @@ import { helpers } from "sc-common";
 import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
-import { MineConsumer, ProvablyFairConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
+import { MineConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
 import { RecentBetPublisher } from "../event-publishers";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
      * @param {Object} dependencies
      * @param {SettleCashOutConsumer} dependencies.settleCashOutConsumer
-     * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {MineConsumer} dependencies.mineConsumer
      * @param {RecentBetConsumer} dependencies.recentBetConsumer
@@ -23,10 +22,10 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         logService,
         betsRepository,
         betLogsRepository,
-        userInfosRepository,
+        gameManagementApiClientFactory,
         baseMetrics,
-        settleCashOutConsumer,
         provablyFairConsumer,
+        settleCashOutConsumer,
         roundResultConsumer,
         roundsRepository,
         mineConsumer,
@@ -41,12 +40,12 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             logService,
             betsRepository,
             betLogsRepository,
-            userInfosRepository,
+            gameManagementApiClientFactory,
             baseMetrics,
+            provablyFairConsumer,
         });
 
         this.settleCashOutConsumer = settleCashOutConsumer;
-        this.provablyFairConsumer = provablyFairConsumer;
         this.roundResultConsumer = roundResultConsumer;
         this.roundsRepository = roundsRepository;
         this.mineConsumer = mineConsumer;

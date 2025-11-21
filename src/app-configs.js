@@ -2,8 +2,8 @@ export default {
     hostingPort: 5000,
     apiSettings: {
         enabledApi: true,
-        apiUrl: "https://l2-proxy1.lumigame.com/game-api",
-        authUrl: "https://l2-auth1.lumigame.com",
+        apiUrl: "https://l2-proxy.lumigame.com/game-api",
+        authUrl: "https://l2-auth.lumigame.com",
         client: {
             id: "game-server",
             secret: "gameserver@20luminet&",
@@ -14,7 +14,7 @@ export default {
         enabledApiLogs: true,
     },
     authenticateSettings: {
-        url: "https://l2-auth1.lumigame.com",
+        url: "https://l2-auth.lumigame.com",
         id: "game-services",
         secret: "gameservices@20luminet&",
         requestTimeout: 10000,
@@ -22,7 +22,7 @@ export default {
         audiences: ["api", "admin-api"],
     },
     userServiceSettings: {
-        url: "https://l2-proxy1.lumigame.com/user",
+        url: "https://l2-proxy.lumigame.com/user",
     },
     socketOptions: {
         pingInterval: 60 * 1000,
@@ -33,7 +33,7 @@ export default {
     },
     enabledLogs: true,
     database: {
-        url: "mongodb://127.0.0.1:27017/",
+        url: "mongodb://localhost:27017/",
         options: {
             dbName: "minigame",
             useNewUrlParser: true,
@@ -41,18 +41,19 @@ export default {
         },
     },
     sentry: {
-        sentryUrl: "https://13f39b8359404ed5aec23655e64ccf78@sentry.lumigame.com/2",
-        logIdentifier: "crash-game",
+        sentryUrl: "",
+        logIdentifier: "crash",
         env: "DEV",
     },
     adminSecretKey: "asWDEerfOIdgsdqRTFabvmgh",
-    enableCorsWs: false,
-    corsUrls: ["http://localhost:7456", "http://localhost:7000", "http://games.lumigame.com", "http://admin.lumigame.com"],
+    disableCors: true,
     chips: [1000, 500, 200, 100, 50, 10, 5, 1],
-    maxQuickBets: 5,
     gameResultSettings: {
-        baseUrl: "https://l2-result1.lumigame.com",
+        baseUrl: "https://l2-result.lumigame.com",
         id: "Game Service",
         key: "58148de3-b895-4f6b-82de-a35eed1b4b28",
+    },
+    gameManagementApiSettings: {
+        BASE: "https://l2-proxy.lumigame.com/game-management-service",
     },
 };

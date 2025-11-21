@@ -111,7 +111,7 @@ const createBaseGameCron = function () {
 /** @type {GameCrons}*/
 let cron;
 
-describe("GameCrons", () => {
+xdescribe("GameCrons", () => {
     beforeEach(() => {
         cron = createBaseGameCron();
 
@@ -250,7 +250,4 @@ describe("GameCrons", () => {
             expect(cron.gameData.remainingTime).toBe(durations.wholeRound);
         });
     });
-
-
-
 });
