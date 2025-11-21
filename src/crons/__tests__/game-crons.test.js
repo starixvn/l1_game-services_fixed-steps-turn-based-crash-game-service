@@ -2,10 +2,11 @@ import { stub, stubMongoose } from "jest-micro-auto-stub";
 import mongoose from "mongoose";
 import { Core } from "sc-game-base";
 import { GameDefinition } from "sc-game-base/src/core";
-import { ProvablyFairConsumer, UnsettledRoundConsumer } from "sc-game-base/src/core/event-consumers";
+import { ProvablyFairConsumer } from "sc-game-base/src/core/event-consumers";
 import { GameStatusPublisher, RunningRoundInfoPublisher } from "sc-game-base/src/core/event-publishers";
 import { SettleCashOutConsumer } from "../../consumers/settle-cash-out-consumer";
 import { SettleGameRoundConsumer } from "../../consumers/settle-game-round-consumer";
+import { UnsettledRoundConsumer } from "../../consumers/unsettled-round-consumer";
 import CrashGameData from "../../game-data";
 import gameSettings from "../../game-settings";
 import UmInfoWatcher from "../../watchers/um-info-watcher";
@@ -15,6 +16,7 @@ import GameCrons from "../game-crons";
 jest.mock("sc-game-base/src/core/event-publishers");
 jest.mock("../../consumers/settle-game-round-consumer");
 jest.mock("../../consumers/settle-cash-out-consumer");
+jest.mock("../../consumers/unsettled-round-consumer");
 jest.mock("../../helpers/crash-point-helper", () => ({
     //calculateCrashTimeInMillisecond: jest.fn().mockReturnValue(1000),
 }));

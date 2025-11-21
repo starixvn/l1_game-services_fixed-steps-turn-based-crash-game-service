@@ -8,9 +8,14 @@ let gameData;
 
 /** @type {mongoose.Model}*/
 const roundsRepository = stubMongoose(mongoose.Model);
+roundsRepository.deleteOne = jest.fn();
 
 /** @type {mongoose.Model}*/
 const betLogsRepository = stubMongoose(mongoose.Model);
+
+/** @type {mongoose.Model}*/
+const roundRmRepository = stubMongoose(mongoose.Model);
+roundRmRepository.create = jest.fn();
 
 const settleCashOutConsumer = stub(SettleCashOutConsumer);
 
@@ -28,6 +33,7 @@ function initConsumer() {
         roundsRepository,
         betLogsRepository,
         settleCashOutConsumer,
+        roundRmRepository,
     });
 }
 
@@ -130,7 +136,7 @@ describe("unsettledRoundConsumer", () => {
                 });
             });
 
-            it("should skip rounds with no bet logs", async () => {
+            it("should skip rounds with no bet logs and move them to roundRmRepository", async () => {
                 // Arrange
                 const unsettledRounds = [
                     {
@@ -148,11 +154,15 @@ describe("unsettledRoundConsumer", () => {
                     }),
                 });
 
+                roundsRepository.deleteOne.mockResolvedValue({});
+
                 betLogsRepository.find.mockReturnValue({
                     lean: jest.fn().mockReturnValue({
                         exec: jest.fn().mockResolvedValue([]),
                     }),
                 });
+
+                roundRmRepository.create.mockResolvedValue({});
 
                 const unsettledRoundConsumer = initConsumer();
 
@@ -161,6 +171,8 @@ describe("unsettledRoundConsumer", () => {
 
                 // Assert
                 expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalled();
+                expect(roundRmRepository.create).toHaveBeenCalledWith(unsettledRounds[0]);
+                expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "round-1" });
             });
 
             it("should handle multiple unsettled rounds", async () => {
@@ -295,8 +307,7 @@ describe("unsettledRoundConsumer", () => {
                 expect(gameData.ingame.player1.activeBet.tapCount).toBe(2);
             });
 
-        it("should only settle rounds with existing bet logs out of multiple rounds", async () => {
-            // Arrange
+        describe("when processing multiple rounds with mixed scenarios", () => {
             const unsettledRounds = [
                 { id: "r1", uid: "uid1", name: "player1", amount: 150, multiplierMode: 2 },
                 { id: "r2", uid: "uid2", name: "player2", amount: 250, multiplierMode: 3 },
@@ -304,7 +315,6 @@ describe("unsettledRoundConsumer", () => {
                 { id: "r4", uid: "uid4", name: "player4", amount: 450, multiplierMode: 5 },
             ];
 
-            // betLogs structure: Only r1 and r3 have bet logs, r2 and r4 do not.
             const betLogsForRounds = {
                 r1: [
                     {
@@ -344,47 +354,135 @@ describe("unsettledRoundConsumer", () => {
                 r4: []
             };
 
-            // Mock implementation for roundsRepository
-            roundsRepository.find.mockReturnValue({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(unsettledRounds),
-                }),
+            beforeEach(() => {
+                roundsRepository.find.mockReturnValue({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(unsettledRounds),
+                    }),
+                });
+
+                roundsRepository.deleteOne.mockResolvedValue({});
+
+                betLogsRepository.find.mockImplementation(({ roundId }) => ({
+                    lean: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(betLogsForRounds[roundId] || []),
+                    }),
+                }));
+
+                roundRmRepository.create.mockResolvedValue({});
+                settleCashOutConsumer.proceedCashOut.mockResolvedValue();
             });
 
-            // patch betLogsRepository.find to return corresponding bet logs for each roundId
-            betLogsRepository.find.mockImplementation(({ roundId }) => ({
-                lean: jest.fn().mockReturnValue({
-                    exec: jest.fn().mockResolvedValue(betLogsForRounds[roundId] || []),
-                }),
-            }));
+            it("should set gameData.ingame only for rounds with bet logs", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
 
-            settleCashOutConsumer.proceedCashOut.mockResolvedValue();
+                // Act
+                await unsettledRoundConsumer.proceed();
 
-            const unsettledRoundConsumer = initConsumer();
+                // Assert
+                expect(gameData.ingame["player1"]).toBeDefined();
+                expect(gameData.ingame["player1"].activeBet.tapCount).toBe(1);
+                expect(gameData.ingame["player1"].activeBet.roundId).toBe("r1");
+                expect(gameData.ingame["player1"].activeBet.amount).toBe(150);
+                expect(gameData.ingame["player1"].activeBet.multiplierMode).toBe(2);
 
-            // Act
-            await unsettledRoundConsumer.proceed();
+                expect(gameData.ingame["player3"]).toBeDefined();
+                expect(gameData.ingame["player3"].activeBet.tapCount).toBe(2);
+                expect(gameData.ingame["player3"].activeBet.roundId).toBe("r3");
+                expect(gameData.ingame["player3"].activeBet.amount).toBe(350);
+                expect(gameData.ingame["player3"].activeBet.multiplierMode).toBe(4);
 
-            // Assert: Only r1 (player1) and r3 (player3) should have activeBet set
-            expect(gameData.ingame["player1"]).toBeDefined();
-            expect(gameData.ingame["player1"].activeBet.tapCount).toBe(1);
+                expect(gameData.ingame["player2"]).toBeUndefined();
+                expect(gameData.ingame["player4"]).toBeUndefined();
+            });
 
-            expect(gameData.ingame["player3"]).toBeDefined();
-            expect(gameData.ingame["player3"].activeBet.tapCount).toBe(2);
+            it("should call settleCashOutConsumer only for rounds with bet logs", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
 
-            expect(gameData.ingame["player2"]).toBeUndefined();
-            expect(gameData.ingame["player4"]).toBeUndefined();
+                // Act
+                await unsettledRoundConsumer.proceed();
 
-            // SettleCashOut should be called only for r1 and r3
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
-                expect.objectContaining({ profile: { name: "player1" } }),
-                true
-            );
-            expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
-                expect.objectContaining({ profile: { name: "player3" } }),
-                true
-            );
+                // Assert
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        UID: "uid1",
+                        profile: { name: "player1" },
+                        session: {
+                            siteId: "site-1",
+                            currencyName: "USD",
+                            currencyCode: "USD",
+                            multiplier: 1.0,
+                            operatorId: "op-1",
+                            playerId: "player-1",
+                            rate: 1.0,
+                        },
+                    }),
+                    true
+                );
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        UID: "uid3",
+                        profile: { name: "player3" },
+                        session: {
+                            siteId: "site-2",
+                            currencyName: "EUR",
+                            currencyCode: "EUR",
+                            multiplier: 2.0,
+                            operatorId: "op-2",
+                            playerId: "player-3",
+                            rate: 2.0,
+                        },
+                    }),
+                    true
+                );
+            });
+
+            it("should move rounds without bet logs to roundRmRepository", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(roundRmRepository.create).toHaveBeenCalledTimes(2);
+                expect(roundRmRepository.create).toHaveBeenCalledWith(unsettledRounds[1]); // r2
+                expect(roundRmRepository.create).toHaveBeenCalledWith(unsettledRounds[3]); // r4
+            });
+
+            it("should delete rounds without bet logs from roundsRepository", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(roundsRepository.deleteOne).toHaveBeenCalledTimes(2);
+                expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "r2" });
+                expect(roundsRepository.deleteOne).toHaveBeenCalledWith({ id: "r4" });
+            });
+
+            it("should not call settleCashOutConsumer for rounds without bet logs", async () => {
+                // Arrange
+                const unsettledRoundConsumer = initConsumer();
+
+                // Act
+                await unsettledRoundConsumer.proceed();
+
+                // Assert
+                expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalledWith(
+                    expect.objectContaining({ profile: { name: "player2" } }),
+                    expect.anything()
+                );
+                expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalledWith(
+                    expect.objectContaining({ profile: { name: "player4" } }),
+                    expect.anything()
+                );
+            });
         });
         });
     });

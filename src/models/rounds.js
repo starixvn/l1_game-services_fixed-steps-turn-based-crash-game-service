@@ -29,3 +29,7 @@ const Schema = new mongoose.Schema({
 export default function (gameConfigName) {
     return mongoose.model(`${gameConfigName}_rounds`, Schema);
 }
+
+export function roundRm(gameConfigName) {
+    return mongoose.model(`${gameConfigName}_rounds_rm`, Schema);
+}

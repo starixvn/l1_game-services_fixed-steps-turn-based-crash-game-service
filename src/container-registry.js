@@ -17,13 +17,8 @@ import {
 import Bot from "./crons/bot";
 import GameCrons from "./crons/game-crons";
 import ProcessBetQueue from "./crons/process-bet-queue";
-import {
-    PlaceBetPublisher,
-    RecentBetPublisher,
-    RoundResultPublisher,
-    UserBetResultPublisher,
-} from "./event-publishers";
-import { BetLogs, RecentBets, Results, Rounds, umInfo } from "./models";
+import { PlaceBetPublisher, RecentBetPublisher, RoundResultPublisher, UserBetResultPublisher } from "./event-publishers";
+import { BetLogs, RecentBets, Results, Rounds, roundRm, umInfo } from "./models";
 import { HistoryQuery } from "./query-apis";
 import { HttpRouter, SocketRouter } from "./routers";
 import UmInfoWatcher from "./watchers/um-info-watcher";
@@ -60,6 +55,7 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             resultsRepository: asValue(Results(definition.configName)),
             betLogsRepository: asValue(BetLogs(definition.configName)),
             recentBetsRepository: asValue(RecentBets(definition.configName)),
+            roundRmRepository: asValue(roundRm(definition.configName)),
             umInfoRepository: asValue(umInfo()),
         });
     }

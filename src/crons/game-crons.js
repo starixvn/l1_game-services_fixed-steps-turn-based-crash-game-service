@@ -71,6 +71,19 @@ export default class GameCron extends Core.Crons.BaseGameCron {
         this.startCron();
     }
 
+    async initRoundId() {
+        const lastRound = await this.roundsRepository
+            .findOne({}, "id", { sort: { id: -1 } })
+            .lean()
+            .exec();
+
+        if (lastRound) {
+            this.gameData.roundId = lastRound.id + 1000;
+        } else {
+            this.gameData.roundId = (await this.getLastArchiveRound()) + 1000;
+        }
+    }
+
     async proceed() {
         const { durations } = this.definition;
 
