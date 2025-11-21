@@ -232,7 +232,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         }
 
         await this.roundsRepository.create(newBet);
-        return newBet.time;
     }
 
     decreaseBetTracks(playerName) {
@@ -254,7 +253,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     notifyPlacingBetResult(player, balance, bet, rate, roundId) {
         const result = this.generatePlacingBetResult(player, balance, bet, rate);
 
-        this.placeBetPublisher.publishSuccessBet(player.UID, { ...result, roundId }, rate);
+        this.placeBetPublisher.publishSuccessBet(player.UID, { ...result, roundId });
     }
 
     getMaxWinPerRound(player) {

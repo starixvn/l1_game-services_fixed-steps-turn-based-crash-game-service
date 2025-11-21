@@ -682,22 +682,6 @@ describe("ProcessBetQueue", () => {
             );
         });
 
-        it("should return bet time", async () => {
-            // Arrange
-            const player = mockPlayer();
-            const roundId = chance.natural();
-            const bet = { amount: 100, freeBet: false, clientSeed: "123" };
-            const rate = 1.0;
-            const currentMultiplier = 2.5;
-            const mockTime = new Date();
-            proceedBetQueue.roundsRepository.create.mockResolvedValue({ time: mockTime });
-
-            // Act
-            const result = await proceedBetQueue.insertBet(player, roundId, bet, rate, currentMultiplier);
-
-            // Assert
-            expect(result).toStrictEqual(mockTime);
-        });
     });
 
     describe("decreaseBetTracks", () => {
@@ -787,7 +771,7 @@ describe("ProcessBetQueue", () => {
             proceedBetQueue.notifyPlacingBetResult(player, balance, bet, rate, roundId);
 
             // Assert
-            expect(proceedBetQueue.placeBetPublisher.publishSuccessBet).toHaveBeenCalledWith(player.UID, { ...mockResult, roundId }, rate);
+            expect(proceedBetQueue.placeBetPublisher.publishSuccessBet).toHaveBeenCalledWith(player.UID, { ...mockResult, roundId });
         });
     });
 
