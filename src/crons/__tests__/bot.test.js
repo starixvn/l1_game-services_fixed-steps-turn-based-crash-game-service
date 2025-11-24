@@ -268,6 +268,7 @@ describe("GameBots", () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: { red: 1000 } };
+            bot.gameData.roundId = 1;
             bot.getMaxBet = jest.fn().mockReturnValue(100);
             bot.getMinBet = jest.fn().mockReturnValue(10);
             bot.convertAmountToChip = jest.fn().mockReturnValue(50);
@@ -290,6 +291,7 @@ describe("GameBots", () => {
                 tapCount: 1,
                 lastActionTime: expect.any(Number),
                 multiplierMode: 1,
+                roundId: 2,
             });
         });
 
@@ -784,11 +786,11 @@ describe("GameBots", () => {
         it("should calculate winning amounts", async () => {
             // Arrange
             const bot = initBot();
-            bot.gameData.roundId = 1;
             bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
+                roundId: 1,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
@@ -803,11 +805,11 @@ describe("GameBots", () => {
         it("should update player balance in gameData", async () => {
             // Arrange
             const bot = initBot();
-            bot.gameData.roundId = 1;
             bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
+                roundId: 1,
             });
             bot.botRate = 1.0;
             bot.gameData.players["bot1"] = { red: 500 };
@@ -823,11 +825,11 @@ describe("GameBots", () => {
         it("should call update recent bet", async () => {
             // Arrange
             const bot = initBot();
-            bot.gameData.roundId = 1;
             bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
+                roundId: 1,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
@@ -847,11 +849,11 @@ describe("GameBots", () => {
         it("should remove bot from activeBots", async () => {
             // Arrange
             const bot = initBot();
-            bot.gameData.roundId = 1;
             bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
+                roundId: 1,
             });
             bot.botRate = 1.0;
             userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });

@@ -70,7 +70,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         );
 
         if (user) {
-            this.gameData.roundId += 1;
+            const roundId = (this.gameData.roundId += 1);
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
@@ -90,12 +90,13 @@ export default class Bot extends Table.Crons.TableGameBot {
                 tapCount: 1,
                 lastActionTime: Date.now(),
                 multiplierMode,
+                roundId,
             });
 
             const rate = this.botRate;
             const baseAmount = betAmount * rate;
             await this.recentBetConsumer.add(user, {
-                roundId: this.gameData.roundId,
+                roundId,
                 amount: betAmount,
                 baseAmount,
                 rate,
@@ -185,6 +186,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         const winningAmount = multiplier * amount;
         const baseWinningAmount = winningAmount * rate;
 
+        const roundId = botState.roundId;
         const user = await this.userInfosRepository.findOneAndUpdate({ id: botId }, { $inc: { red: +winningAmount } });
 
         if (this.gameData.players[botId]) {
@@ -193,7 +195,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         }
 
         await this.recentBetConsumer.update({
-            roundId: this.gameData.roundId,
+            roundId,
             winningAmount,
             baseWinningAmount,
             multiplier,
