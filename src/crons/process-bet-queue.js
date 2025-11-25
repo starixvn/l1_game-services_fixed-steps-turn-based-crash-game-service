@@ -100,7 +100,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
                 await this.proceedMine(player, payload);
                 break;
             case Actions.CashOut:
-                await this.settleCashOutConsumer.proceedCashOut(player);
+                await this.settleCashOutConsumer.proceedCashOut({ player });
                 break;
         }
     }
@@ -150,7 +150,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         }
 
         if (currentMultiplier === 0) {
-            this.settleCashOutConsumer.proceedCashOut(player);
+            this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true });
         }
     }
 

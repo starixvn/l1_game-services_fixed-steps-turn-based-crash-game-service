@@ -296,6 +296,7 @@ describe("SettleGameRoundConsumer", () => {
                     amount: 100,
                     winAmount: 102,
                     reachMaxWin: false,
+                    rate: 1.0,
                 },
             ];
 
@@ -415,8 +416,17 @@ describe("SettleGameRoundConsumer", () => {
                     // Assert
                     expect(consumer.userBetResultPublisher.publish).toHaveBeenCalledWith(player.UID, {
                         ...betResult,
+                        rate: mockBetLogs[2].rate,
                         reachMaxWin: false,
                     });
+                });
+
+                it("should not publish bet result to user when isUserDisconnect is true", async () => {
+                    // Act
+                    await consumer.settleRound({ roundId, time, player, playerName: player.profile.name, isUserDisconnect: true });
+
+                    // Assert
+                    expect(consumer.userBetResultPublisher.publish).not.toHaveBeenCalled();
                 });
 
                 it("should updatePlayerBetTracks", async () => {

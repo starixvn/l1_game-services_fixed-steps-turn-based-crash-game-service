@@ -303,7 +303,10 @@ describe("MineConsumer", () => {
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
-            expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, true);
+            expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
+                player: mockPlayer,
+                isAutoCashOut: true,
+            });
         });
 
         it("should call settleCashOutConsumer when reaching max multiplier through progression", async () => {
@@ -317,7 +320,10 @@ describe("MineConsumer", () => {
             await consumer.handleMine(mockPlayer, mockActiveBet, { clientSendTime: Date.now() });
 
             // Assert
-            expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, true);
+            expect(mockSettleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
+                player: mockPlayer,
+                isAutoCashOut: true,
+            });
         });
 
         it("should calculate win amount correctly", async () => {

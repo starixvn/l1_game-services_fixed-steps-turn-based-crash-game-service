@@ -24,7 +24,7 @@ export class UserDisconnectConsumer extends Table.EventConsumers.TableOutGameCon
         const isValidCashOut = this.settleCashOutConsumer.validateCashOut(player);
 
         if (isValidCashOut) {
-            await this.settleCashOutConsumer.proceedCashOut(player, true);
+            await this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true, isUserDisconnect: true });
         }
 
         delete this.gameData.provablyFair[player.profile.name];

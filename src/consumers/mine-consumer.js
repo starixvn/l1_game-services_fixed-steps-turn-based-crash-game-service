@@ -102,7 +102,7 @@ export class MineConsumer extends PlaceBetConsumer {
         });
 
         if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
-            await this.settleCashOutConsumer.proceedCashOut(player, true);
+            await this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true });
         }
     }
 

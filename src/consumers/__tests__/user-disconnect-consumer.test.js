@@ -1,7 +1,7 @@
 import { stub } from "jest-micro-auto-stub";
 import { Core } from "sc-game-base";
-import { SettleCashOutConsumer, UserDisconnectConsumer } from "../../consumers";
 import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
+import { SettleCashOutConsumer, UserDisconnectConsumer } from "../../consumers";
 
 import Chance from "chance";
 describe("UserDisconnectConsumer", () => {
@@ -130,7 +130,11 @@ describe("UserDisconnectConsumer", () => {
                     await consumer.consume(socketClient);
 
                     // Assert
-                    expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, true);
+                    expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
+                        player: mockPlayer,
+                        isAutoCashOut: true,
+                        isUserDisconnect: true,
+                    });
                 });
 
                 it("should call super.consume after cash out", async () => {

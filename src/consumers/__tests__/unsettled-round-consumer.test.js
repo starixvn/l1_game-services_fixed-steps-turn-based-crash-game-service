@@ -114,8 +114,8 @@ describe("unsettledRoundConsumer", () => {
                     { _id: false },
                     { sort: { time: -1 } }
                 );
-                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
-                    {
+                expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
+                    player: {
                         UID: "player1-uid",
                         profile: { name: "player1" },
                         session: {
@@ -128,8 +128,9 @@ describe("unsettledRoundConsumer", () => {
                             rate: 1.0,
                         },
                     },
-                    true
-                );
+                    isAutoCashOut: true,
+                    isUserDisconnect: true,
+                });
                 expect(gameData.ingame.player1).toEqual({
                     activeBet: {
                         roundId: "round-1",
@@ -416,35 +417,41 @@ describe("unsettledRoundConsumer", () => {
                 expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledTimes(2);
                 expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        UID: "uid1",
-                        profile: { name: "player1" },
-                        session: {
-                            siteId: "site-1",
-                            currencyName: "USD",
-                            currencyCode: "USD",
-                            multiplier: 1.0,
-                            operatorId: "op-1",
-                            playerId: "player-1",
-                            rate: 1.0,
-                        },
-                    }),
-                    true
+                        player: expect.objectContaining({
+                            UID: "uid1",
+                            profile: { name: "player1" },
+                            session: {
+                                siteId: "site-1",
+                                currencyName: "USD",
+                                currencyCode: "USD",
+                                multiplier: 1.0,
+                                operatorId: "op-1",
+                                playerId: "player-1",
+                                rate: 1.0,
+                            },
+                        }),
+                        isAutoCashOut: true,
+                        isUserDisconnect: true,
+                    })
                 );
                 expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        UID: "uid3",
-                        profile: { name: "player3" },
-                        session: {
-                            siteId: "site-2",
-                            currencyName: "EUR",
-                            currencyCode: "EUR",
-                            multiplier: 2.0,
-                            operatorId: "op-2",
-                            playerId: "player-3",
-                            rate: 2.0,
-                        },
-                    }),
-                    true
+                        player: expect.objectContaining({
+                            UID: "uid3",
+                            profile: { name: "player3" },
+                            session: {
+                                siteId: "site-2",
+                                currencyName: "EUR",
+                                currencyCode: "EUR",
+                                multiplier: 2.0,
+                                operatorId: "op-2",
+                                playerId: "player-3",
+                                rate: 2.0,
+                            },
+                        }),
+                        isAutoCashOut: true,
+                        isUserDisconnect: true,
+                    })
                 );
             });
 
@@ -496,12 +503,14 @@ describe("unsettledRoundConsumer", () => {
 
                 // Assert
                 expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalledWith(
-                    expect.objectContaining({ profile: { name: "player2" } }),
-                    expect.anything()
+                    expect.objectContaining({
+                        player: expect.objectContaining({ profile: { name: "player2" } }),
+                    })
                 );
                 expect(settleCashOutConsumer.proceedCashOut).not.toHaveBeenCalledWith(
-                    expect.objectContaining({ profile: { name: "player4" } }),
-                    expect.anything()
+                    expect.objectContaining({
+                        player: expect.objectContaining({ profile: { name: "player4" } }),
+                    })
                 );
             });
         });

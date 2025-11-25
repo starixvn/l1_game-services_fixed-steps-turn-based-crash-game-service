@@ -33,7 +33,7 @@ export class SettleCashOutConsumer {
         return betTracks?.[Actions.Bet];
     }
 
-    async proceedCashOut(player, isAutoCashOut = false) {
+    async proceedCashOut({ player, isAutoCashOut = false, isUserDisconnect = false }) {
         const isValidCashOut = this.validateCashOut(player) || isAutoCashOut;
         const bet = this.getCashOutBet(player);
 
@@ -53,6 +53,7 @@ export class SettleCashOutConsumer {
             time: new Date(),
             player,
             playerName: player.profile.name,
+            isUserDisconnect,
         });
 
         const rate = this.calculateCurrencyRate(player.session);
