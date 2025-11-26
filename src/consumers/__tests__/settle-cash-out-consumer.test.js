@@ -1,12 +1,12 @@
-import mongoose from "mongoose";
-import { stub, stubMongoose } from "jest-micro-auto-stub";
-import GameData from "../../game-data";
-import PlaceBetPublisher from "../../event-publishers/place-bet-publisher";
-import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
-import { Actions } from "../../constants";
 import Chance from "chance";
+import { stub, stubMongoose } from "jest-micro-auto-stub";
+import mongoose from "mongoose";
+import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
+import { Actions } from "../../constants";
+import { RecentBetConsumer, SettleCashOutConsumer, SettleGameRoundConsumer } from "../../consumers";
+import { RecentBetPublisher } from "../../event-publishers";
+import GameData from "../../game-data";
 import helpers from "../../helpers/notice-helper";
-
 const chance = new Chance();
 
 jest.mock("../../helpers/date-helper", () => ({
@@ -18,17 +18,42 @@ describe("SettleCashOutConsumer", () => {
     gameData.updatePlayerAction = jest.fn();
     gameData.gameConfigs.crashConfig = {};
     gameData.result = 100;
+    gameData.exchangeRates.exId = 1;
 
-    const placeBetPublisher = stub(PlaceBetPublisher);
+    const publisher = stub(BaseEventPublisher);
+
     const logService = {
         logError: jest.fn(),
     };
     const betLogsRepository = stubMongoose(mongoose.Model);
 
+    /**
+     * @type {RecentBetConsumer}
+     */
+    const recentBetConsumer = stub(RecentBetConsumer);
+    /**
+     * @type {SettleGameRoundConsumer}
+     */
+    const settleGameRoundConsumer = stub(SettleGameRoundConsumer);
+    /**
+     * @type {RecentBetPublisher}
+     */
+    const recentBetPublisher = stub(RecentBetPublisher);
+    /**
+     * @type {SettleCashOutConsumer}
+     */
     let consumer;
 
     beforeEach(() => {
-        consumer = new SettleCashOutConsumer(gameData, placeBetPublisher, logService, betLogsRepository);
+        consumer = new SettleCashOutConsumer({
+            gameData,
+            settleGameRoundConsumer,
+            publisher,
+            logService,
+            betLogsRepository,
+            recentBetConsumer,
+            recentBetPublisher,
+        });
     });
 
     afterEach(() => {
@@ -58,7 +83,15 @@ describe("SettleCashOutConsumer", () => {
 
     describe("insertBetLog", () => {
         const roundId = chance.natural();
-        const payload = { roundId, action: Actions.CashOut, tapCount: 1 };
+        const payload = {
+            roundId,
+            action: Actions.CashOut,
+            tapCount: 1,
+            amount: 1000,
+            multiplier: 1.5,
+            clientSendTime: new Date(),
+            receivedTime: new Date(),
+        };
 
         beforeEach(() => {
             consumer.calculateCurrencyRate = jest.fn();
@@ -69,36 +102,43 @@ describe("SettleCashOutConsumer", () => {
             await consumer.insertBetLog(realPlayer, roundId, payload);
 
             // Assert
-            expect(consumer.calculateCurrencyRate).toBeCalledWith(realPlayer.session);
+            expect(consumer.calculateCurrencyRate).toHaveBeenCalledWith(realPlayer.session);
         });
 
-        it("should call betLogsRepository.create", async () => {
+        it("should call betLogsRepository.create with correct parameters", async () => {
             // Arrange
             const rate = chance.floating({ min: 1 });
             const mockDate = new Date();
             jest.spyOn(global, "Date").mockReturnValueOnce(mockDate);
             consumer.calculateCurrencyRate.mockReturnValueOnce(rate);
 
+            const bet = { ...payload, isAutoCashOut: true };
+            realPlayer.session.operatorId = "operator123";
+
             // Act
-            await consumer.insertBetLog(realPlayer, roundId, payload);
+            await consumer.insertBetLog(realPlayer, roundId, bet);
 
             // Assert
-            expect(betLogsRepository.create).toBeCalledWith({
+            expect(betLogsRepository.create).toHaveBeenCalledWith({
                 uid: realPlayer.UID,
                 name: realPlayer.profile.name,
                 time: mockDate,
-                action: payload.action,
-                amount: payload.amount,
-                clientSendTime: payload.clientSendTime,
-                receivedTime: payload.receivedTime,
+                action: bet.action,
+                amount: bet.amount,
+                clientSendTime: bet.clientSendTime,
+                receivedTime: bet.receivedTime,
                 roundId,
-                multiplier: payload.multiplier,
+                multiplier: bet.multiplier,
                 siteId: realPlayer.session.siteId,
                 currency: realPlayer.session.currencyName,
                 rate,
                 operatorId: realPlayer.session.operatorId,
                 playerId: realPlayer.session.playerId,
-                tapCount: payload.tapCount,
+                tapCount: bet.tapCount,
+                winAmount: 1500, // 1000 * 1.5
+                isAutoCashOut: bet.isAutoCashOut,
+                currencyCode: realPlayer.session.currencyCode,
+                currencyMultiplier: realPlayer.session.multiplier,
             });
         });
     });
@@ -150,7 +190,6 @@ describe("SettleCashOutConsumer", () => {
         it("should return false when player has already cashed out", () => {
             // Arrange
             gameData.ingame[playerName].betTracks = {
-                [Actions.Bet]: { amount: 100 },
                 [Actions.CashOut]: { time: new Date() },
             };
 
@@ -176,12 +215,6 @@ describe("SettleCashOutConsumer", () => {
     });
 
     describe("proceedCashOut", () => {
-        const setupValidBetDetails = () => ({
-            multiplier: 1.5,
-            roundId: chance.natural(),
-            tapCount: 1,
-            amount: 100,
-        });
 
         beforeEach(() => {
             // Setup basic game data structure
@@ -199,7 +232,7 @@ describe("SettleCashOutConsumer", () => {
             };
 
             // Mock baseEventPublisher
-            consumer.baseEventPublisher = {
+            consumer.publisher = {
                 publishToUser: jest.fn(),
             };
 
@@ -210,36 +243,23 @@ describe("SettleCashOutConsumer", () => {
             jest.spyOn(consumer, "updateGameData");
         });
 
-        const setupSuccessfulCashOut = (betDetails = setupValidBetDetails()) => {
-            consumer.validateCashOut.mockReturnValue(true);
-            consumer.getCashOutBet.mockResolvedValue(betDetails);
-            return betDetails;
-        };
 
         describe("when validation fails", () => {
-            it("should return null", async () => {
-                // Arrange
-                const payload = { action: Actions.CashOut };
-                consumer.validateCashOut.mockReturnValue(false);
-
-                // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
-
-                // Assert
-                expect(result).toBeNull();
+            beforeEach(() => {
+                jest.spyOn(consumer.publisher, "publishToUser");
             });
 
             it("should publish invalid notice", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
+
                 consumer.validateCashOut.mockReturnValue(false);
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
-                expect(consumer.baseEventPublisher.publishToUser).toHaveBeenCalledTimes(1);
-                expect(consumer.baseEventPublisher.publishToUser).toHaveBeenCalledWith(realPlayer.UID, {
+                expect(consumer.publisher.publishToUser).toHaveBeenCalledTimes(1);
+                expect(consumer.publisher.publishToUser).toHaveBeenCalledWith(realPlayer.UID, {
                     endBet: -1,
                     notice: helpers.invalidCashOut,
                 });
@@ -247,14 +267,13 @@ describe("SettleCashOutConsumer", () => {
 
             it("should not proceed with further processing", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
+
                 consumer.validateCashOut.mockReturnValue(false);
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
-                expect(consumer.getCashOutBet).not.toHaveBeenCalled();
                 expect(consumer.insertBetLog).not.toHaveBeenCalled();
                 expect(consumer.updateGameData).not.toHaveBeenCalled();
             });
@@ -270,6 +289,7 @@ describe("SettleCashOutConsumer", () => {
                     roundId: chance.natural(),
                     tapCount: 1,
                     amount: 100,
+                    multiplierMode: 1,
                 };
 
                 // Setup for successful validation scenario
@@ -277,40 +297,34 @@ describe("SettleCashOutConsumer", () => {
                 consumer.getCashOutBet.mockReturnValue(betDetails);
                 consumer.insertBetLog.mockResolvedValue();
                 consumer.updateGameData.mockResolvedValue();
+                consumer.settleGameRoundConsumer.settleRound.mockResolvedValue(150);
             });
 
-            it("should return player with bet details", async () => {
+            it("should complete successfully without errors", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
 
-                // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
-
-                // Assert
-                expect(result).toEqual({
-                    player: realPlayer,
-                    ...betDetails,
-                });
+                // Act & Assert
+                await expect(consumer.proceedCashOut({ player: realPlayer })).resolves.not.toThrow();
+                expect(consumer.insertBetLog).toHaveBeenCalled();
+                expect(consumer.updateGameData).toHaveBeenCalled();
+                expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalled();
             });
 
             it("should insert bet log with correct details", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
-
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
                 expect(consumer.insertBetLog).toHaveBeenCalledTimes(1);
-                expect(consumer.insertBetLog).toHaveBeenCalledWith(realPlayer, betDetails.roundId, betDetails);
+                expect(consumer.insertBetLog).toHaveBeenCalledWith(realPlayer, betDetails.roundId, { ...betDetails, isAutoCashOut: false });
             });
 
             it("should update game data", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
 
                 // Act
-                await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
                 expect(consumer.updateGameData).toHaveBeenCalledTimes(1);
@@ -318,22 +332,135 @@ describe("SettleCashOutConsumer", () => {
                     multiplier: betDetails.multiplier,
                     roundId: betDetails.roundId,
                     tapCount: betDetails.tapCount,
+                    multiplierMode: betDetails.multiplierMode,
+                });
+            });
+
+            it("should call settleRound with correct parameters", async () => {
+                // Arrange
+                const mockTime = new Date();
+                jest.spyOn(global, "Date").mockImplementation(() => mockTime);
+
+                // Act
+                await consumer.proceedCashOut({ player: realPlayer });
+
+                // Assert
+                expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalledWith({
+                    roundId: betDetails.roundId,
+                    time: mockTime,
+                    player: realPlayer,
+                    playerName: realPlayer.profile.name,
+                    isUserDisconnect: false,
+                });
+            });
+
+            describe("and has recent bet", () => {
+                it("should call recentBetConsumer.add when winningAmount > 0", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    betDetails.amount = 50;
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer });
+
+                    // Assert
+                    expect(consumer.recentBetConsumer.add).toHaveBeenCalledWith(realPlayer, {
+                        roundId: betDetails.roundId,
+                        amount: betDetails.amount,
+                        baseAmount: 50, // 50 * 1.0
+                        rate: 1.0,
+                        winningAmount: 100,
+                        baseWinningAmount: 100, // 100 * 1.0
+                        multiplier: betDetails.multiplier,
+                    });
+                });
+
+                it("should not call recentBetConsumer.add when winningAmount is 0", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    betDetails.amount = 50;
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(0);
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer });
+
+                    // Assert
+                    expect(consumer.recentBetConsumer.add).not.toHaveBeenCalled();
+                });
+
+                it("should not call recentBetConsumer.add when isUserDisconnect is true", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    betDetails.amount = 50;
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer, isUserDisconnect: true });
+
+                    // Assert
+                    expect(consumer.recentBetConsumer.add).not.toHaveBeenCalled();
+                });
+            });
+
+            describe("with isAutoCashOut", () => {
+                it("should call settleRound with isAutoCashOut flag", async () => {
+                    // Arrange
+                    const mockTime = new Date();
+                    jest.spyOn(global, "Date").mockImplementation(() => mockTime);
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer, isAutoCashOut: true });
+
+                    // Assert
+                    expect(consumer.insertBetLog).toHaveBeenCalledWith(realPlayer, betDetails.roundId, { ...betDetails, isAutoCashOut: true });
+                    expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalledWith({
+                        roundId: betDetails.roundId,
+                        time: mockTime,
+                        player: realPlayer,
+                        playerName: realPlayer.profile.name,
+                        isUserDisconnect: false,
+                    });
+                });
+            });
+
+            describe("with isUserDisconnect", () => {
+                it("should call settleRound with isUserDisconnect flag", async () => {
+                    // Arrange
+                    const mockTime = new Date();
+                    jest.spyOn(global, "Date").mockImplementation(() => mockTime);
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer, isUserDisconnect: true });
+
+                    // Assert
+                    expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalledWith({
+                        roundId: betDetails.roundId,
+                        time: mockTime,
+                        player: realPlayer,
+                        playerName: realPlayer.profile.name,
+                        isUserDisconnect: true,
+                    });
                 });
             });
         });
 
         describe("when getCashOutBet returns null", () => {
-            it("should return null without further processing", async () => {
+            it("should not proceed with further processing", async () => {
                 // Arrange
-                const payload = { action: Actions.CashOut };
                 consumer.validateCashOut.mockReturnValue(true);
                 consumer.getCashOutBet.mockReturnValue(null);
 
                 // Act
-                const result = await consumer.proceedCashOut(realPlayer, payload);
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
-                expect(result).toBeNull();
                 expect(consumer.insertBetLog).not.toHaveBeenCalled();
                 expect(consumer.updateGameData).not.toHaveBeenCalled();
             });
@@ -365,47 +492,16 @@ describe("SettleCashOutConsumer", () => {
                 tapCount: 1,
                 amount: 100,
             };
-            gameData.ingame[playerName].betTracks = {
-                [Actions.Bet]: expectedBet,
-            };
 
+            gameData.ingame[playerName].activeBet = {
+                ...expectedBet,
+                currentMultiplier: expectedBet.multiplier,
+            };
             // Act
             const result = consumer.getCashOutBet(realPlayer);
 
             // Assert
             expect(result).toEqual(expectedBet);
-        });
-    });
-
-    describe("publishCashOut", () => {
-        beforeEach(() => {
-            consumer.placeBetPublisher = {
-                publishSuccessCashOut: jest.fn(),
-            };
-            consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
-        });
-
-        it("should publish cash out details correctly", async () => {
-            // Arrange
-            const payload = { action: Actions.CashOut };
-            const winningDetails = {
-                multiplier: 1.5,
-                amount: 100,
-            };
-
-            // Act
-            await consumer.publishCashOut(realPlayer, payload, winningDetails);
-
-            // Assert
-            expect(consumer.placeBetPublisher.publishSuccessCashOut).toHaveBeenCalledWith(
-                realPlayer.UID,
-                {
-                    name: realPlayer.profile.name,
-                    playerId: realPlayer.UID,
-                    [payload.action]: winningDetails,
-                },
-                1.0
-            );
         });
     });
 });

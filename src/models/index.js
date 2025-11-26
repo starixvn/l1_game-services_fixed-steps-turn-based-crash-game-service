@@ -1,8 +1,8 @@
-import BetLogs, { tempBetLogs } from "./bet-logs";
-import Bets, { tempBets } from "./bets";
-import BigWins from "./big-wins";
-import Rounds from "./rounds";
-import umInfo from "./um_info";
+import BetLogs from "./bet-logs";
+import RecentBets from "./recent-bets";
 import Results from "./results";
+import Rounds, { roundRm } from "./rounds";
+import umInfo from "./um_info";
 
-export { BetLogs, Bets, BigWins, Rounds, tempBetLogs, tempBets, umInfo, Results };
+export { BetLogs, RecentBets, Results, roundRm, Rounds, umInfo };
+

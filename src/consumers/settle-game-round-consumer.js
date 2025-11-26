@@ -1,8 +1,12 @@
 import { EventConsumers } from "sc-game-base/src/table";
 import { Actions } from "../constants";
 import { decrypt } from "../helpers/crypto-helper";
-
+import { ProvablyFairConsumer } from "./provably-fair-consumer";
 export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRoundConsumer {
+    /**
+     * @param {Object} dependencies
+     * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
+     */
     constructor({
         definition,
         gameData,
@@ -40,23 +44,24 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
         return this.betLogsRepository.find({ roundId }).lean().exec();
     }
 
-    async settleRound({ roundId, time, player, playerName }) {
+    async settleRound({ roundId, time, player, playerName, isUserDisconnect = false }) {
         try {
             const round = await this.queryRound(roundId);
             const result = await this.resultsRepository.findOne({ roundId }).lean().exec();
-            const crashPoint = decrypt(result.encryptedFinalResult);
+            const crashPoint = decrypt(result?.encryptedFinalResult);
             const betLogs = await this.queryBetLogs(roundId);
             const cashOutLog = betLogs.find((log) => log.action === Actions.CashOut);
 
             if (!round || !cashOutLog || !result) {
                 this.logService.logError(`${this.definition.name} Settle Error: Invalid round data: ${roundId}`);
-                return;
+                return 0;
             }
 
             const winAmount = Math.min(round.amount * this.getMultiplier(cashOutLog), round.maxWin);
 
             const betResult = this.calculateBetResult(round.amount, winAmount);
 
+            round.betWin = betResult.totalWin;
             round.betwin = betResult.totalWin;
             round.result = +crashPoint;
             round.paid = true;
@@ -68,11 +73,13 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
             await round.save();
 
             if (player) {
-                await this.userBetResultPublisher.publish(player.UID, {
-                    ...betResult,
-                    rate: cashOutLog.rate,
-                    reachMaxWin: round.reachMaxWin,
-                });
+                if (!isUserDisconnect) {
+                    await this.userBetResultPublisher.publish(player.UID, {
+                        ...betResult,
+                        rate: cashOutLog.rate,
+                        reachMaxWin: round.reachMaxWin,
+                    });
+                }
                 this.updatePlayerBetTracks(round.name);
                 this.gameData.ingame[playerName].betTracks = {};
 
@@ -94,28 +101,14 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
 
         if (playerGameData) {
             playerGameData.betTracks = {};
-            playerGameData.activeBet = undefined;
+            playerGameData.activeBet = null;
         }
     }
 
-    getMineResults(betLogs = []) {
-        const result = [];
-        const settlementResult = [];
-        let tapCount = 0;
-
-        betLogs
-            .filter((betLog) => betLog.action === Actions.Mine)
-            .forEach((betLog) => {
-                result.push(betLog.result);
-                settlementResult.push(betLog.result);
-                tapCount += 1;
-            });
-
-        return { result, settlementResult, tapCount };
-    }
-
     getMultiplier(cashOutLog) {
-        if (!cashOutLog) return 0;
+        if (!cashOutLog) {
+            return 0;
+        }
 
         return cashOutLog.multiplier;
     }

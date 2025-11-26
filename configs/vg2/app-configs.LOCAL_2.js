@@ -10,7 +10,7 @@ export default {
         },
         useAuthenticate: true,
         requestTimeout: 10000,
-        placeBetTimeout: 4000,
+        placeBetTimeout: 10000,
         enabledApiLogs: true,
     },
     authenticateSettings: {
@@ -38,7 +38,6 @@ export default {
             dbName: "minigame",
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            auto_reconnect: true,
         },
     },
     sentry: {

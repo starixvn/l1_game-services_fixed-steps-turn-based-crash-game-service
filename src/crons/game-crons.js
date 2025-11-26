@@ -1,6 +1,12 @@
 import { Core } from "sc-game-base";
-
+import { SettleCashOutConsumer } from "../consumers";
+import { UnsettledRoundConsumer } from "../consumers/unsettled-round-consumer";
 export default class GameCron extends Core.Crons.BaseGameCron {
+    /**
+     * @param {Object} dependencies
+     * @param {SettleCashOutConsumer} dependencies.settleCashOutConsumer
+     * @param {UnsettledRoundConsumer} dependencies.unsettledRoundConsumer
+     */
     constructor({
         definition,
         gameData,
@@ -55,14 +61,27 @@ export default class GameCron extends Core.Crons.BaseGameCron {
         this.betsRepository = betsRepository;
         this.betLogsRepository = betLogsRepository;
         this.settleCashOutConsumer = settleCashOutConsumer;
+        this.unsettledRoundConsumer = unsettledRoundConsumer;
     }
     async start() {
         await this.initRoundId();
-        await this.queryLastResult();
         await this.getSettingForNewRound();
         await this.updateExchangeRates();
-        await this.proceedUnsettledBets();
+        await this.unsettledRoundConsumer.proceed();
         this.startCron();
+    }
+
+    async initRoundId() {
+        const lastRound = await this.roundsRepository
+            .findOne({}, "id", { sort: { id: -1 } })
+            .lean()
+            .exec();
+
+        if (lastRound) {
+            this.gameData.roundId = lastRound.id + 1000;
+        } else {
+            this.gameData.roundId = (await this.getLastArchiveRound()) + 1000;
+        }
     }
 
     async proceed() {
@@ -81,50 +100,5 @@ export default class GameCron extends Core.Crons.BaseGameCron {
         if (this.gameData.remainingTime < 0) {
             this.gameData.remainingTime = durations.wholeRound;
         }
-    }
-
-    async processRunningRounds() {}
-
-    async proceedUnsettledBets() {
-        const unsettledBets = await this.roundsRepository.find({ paid: false }).lean().exec();
-
-        await Promise.all(
-            Object.values(unsettledBets).map(async (round) => {
-                const betLogs = await this.betLogsRepository
-                    .find({ roundId: round.id }, { _id: false }, { sort: { time: -1 } })
-                    .lean()
-                    .exec();
-
-                const { siteId, currency, operatorId, playerId, rate, currencyMultiplier, currencyCode, multiplier } = betLogs[0];
-                const tapCount = betLogs.length;
-
-                const player = {
-                    UID: round.uid,
-                    profile: {
-                        name: round.name,
-                    },
-                    session: {
-                        siteId,
-                        currencyName: currency,
-                        currencyCode: currencyCode,
-                        multiplier: currencyMultiplier,
-                        operatorId,
-                        playerId,
-                        rate,
-                    },
-                };
-
-                this.gameData.ingame[player.profile.name] = {
-                    activeBet: {
-                        roundId: round.id,
-                        tapCount: tapCount,
-                        currentMultiplier: multiplier,
-                        amount: round.amount,
-                    },
-                };
-
-                await this.settleCashOutConsumer.proceedCashOut(player, true);
-            })
-        );
     }
 }

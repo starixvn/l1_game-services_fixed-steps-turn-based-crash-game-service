@@ -1,9 +1,10 @@
+import mongoose from "mongoose";
+import { helpers } from "sc-common";
 import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
-import { helpers } from "sc-common";
-import mongoose from "mongoose";
-import { SettleCashOutConsumer, MineConsumer, ProvablyFairConsumer } from "../consumers";
+import { MineConsumer, ProvablyFairConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
+import { RecentBetPublisher } from "../event-publishers";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
      * @param {Object} dependencies
@@ -11,7 +12,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
      * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {MineConsumer} dependencies.mineConsumer
-     *
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
+     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      * */
     constructor({
         definition,
@@ -28,6 +30,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         roundResultConsumer,
         roundsRepository,
         mineConsumer,
+        recentBetConsumer,
+        recentBetPublisher,
     }) {
         super({
             definition,
@@ -46,26 +50,34 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.roundResultConsumer = roundResultConsumer;
         this.roundsRepository = roundsRepository;
         this.mineConsumer = mineConsumer;
+        this.recentBetConsumer = recentBetConsumer;
+        this.recentBetPublisher = recentBetPublisher;
     }
 
     dequeueBets() {
-        if (this.gameData.ingame) {
-            Object.values(this.gameData.ingame).forEach((playerInGame) => {
-                if (!playerInGame.betProcessing && playerInGame.betQueue && playerInGame.betQueue.length > 0) {
-                    const self = this;
-                    const { player, payload } = playerInGame.betQueue.shift();
-
-                    playerInGame.betProcessing = true;
-
-                    tracer.startActiveSpan("dequeueBet", async (span) => {
-                        self.proceedActions(player, payload)
-                            .then(() => (playerInGame.betProcessing = false))
-                            .catch(self.logService.logError)
-                            .finally(() => span.end());
-                    });
-                }
-            });
+        if (!this.gameData.ingame) {
+            return;
         }
+
+        // Filter first to only process players with pending bets
+        const playersWithPendingBets = Object.entries(this.gameData.ingame)
+            .filter(([_, playerInGame]) => 
+                !playerInGame.betProcessing && 
+                playerInGame.betQueue?.length > 0
+            );
+
+        playersWithPendingBets.forEach(([_, playerInGame]) => {
+            const { player, payload } = playerInGame.betQueue.shift();
+
+            playerInGame.betProcessing = true;
+
+            tracer.startActiveSpan("dequeueBet", async (span) => {
+                this.proceedActions(player, payload)
+                    .then(() => (playerInGame.betProcessing = false))
+                    .catch(this.logService.logError)
+                    .finally(() => span.end());
+            });
+        });
     }
 
     async validateBetRequest(player, payload) {
@@ -94,7 +106,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
                 await this.proceedMine(player, payload);
                 break;
             case Actions.CashOut:
-                await this.settleCashOutConsumer.proceedCashOut(player);
+                await this.settleCashOutConsumer.proceedCashOut({ player });
                 break;
         }
     }
@@ -107,11 +119,18 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const rate = this.calculateCurrencyRate(player.session);
         const playerName = player.profile.name;
         this.provablyFairConsumer.generateCrashPoint(playerName, bet.clientSeed, roundId);
-        const currentMultiplier = this.gameData.provablyFair[playerName].finalResult > 1 ? 1.01 : 0;
 
-        await this.provablyFairConsumer.createResultRecord(player.profile.name, roundId);
-        await this.insertBet(player, roundId, bet, rate, currentMultiplier);
-        await this.insertBetLog(player, roundId, bet, currentMultiplier);
+        const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find(
+            (config) => config.mode === bet.multiplierMode
+        );
+        const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
+        const currentMultiplier = this.gameData.provablyFair[playerName].finalResult > firstMultiplier ? firstMultiplier : 0;
+
+        await Promise.all([
+            this.provablyFairConsumer.createResultRecord(player.profile.name, roundId),
+            this.insertBet(player, roundId, bet, rate, currentMultiplier),
+            this.insertBetLog(player, roundId, bet, currentMultiplier),
+        ]);
 
         this.gameData.ingame[playerName].activeBet = { ...bet, currentMultiplier, tapCount: 1, maxWin: this.getMaxWinPerRound(player) };
 
@@ -127,8 +146,8 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             await this.updateUserStakeLevel(player, balance.minBet, balance.maxBet);
         }
 
-        if (currentMultiplier == 0) {
-            this.settleCashOutConsumer.proceedCashOut(player);
+        if (currentMultiplier === 0) {
+            this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true });
         }
     }
 
@@ -155,13 +174,13 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             amount: bet.amount,
             winAmount: bet.amount * currentMultiplier,
             freeBet: bet.freeBet,
-            increment: bet.increment,
             result: bet.result,
             multiplier: currentMultiplier,
             clientSendTime: bet.clientSendTime,
             receivedTime: bet.receivedTime,
             roundId,
             tapCount: bet.tapCount,
+            multiplierMode: bet.multiplierMode,
         };
 
         if (player.session) {
@@ -192,10 +211,11 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
             autoCashOut: bet.autoCashOut,
             clientSeed: bet.clientSeed,
             totalAmount: bet.amount,
-            odds: crashConfig.multiplierConfigs,
+            odds: crashConfig.fixedStepsMultiplierConfigs,
             exchangeRateId: this.gameData.exchangeRates.exId,
             multiplier: currentMultiplier,
             tapCount: 1,
+            multiplierMode: bet.multiplierMode,
             maxWin: this.getMaxWinPerRound(player),
         };
 
@@ -209,7 +229,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         }
 
         await this.roundsRepository.create(newBet);
-        return newBet.time;
     }
 
     decreaseBetTracks(playerName) {
@@ -231,7 +250,7 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     notifyPlacingBetResult(player, balance, bet, rate, roundId) {
         const result = this.generatePlacingBetResult(player, balance, bet, rate);
 
-        this.placeBetPublisher.publishSuccessBet(player.UID, { ...result, roundId }, rate);
+        this.placeBetPublisher.publishSuccessBet(player.UID, { ...result, roundId });
     }
 
     getMaxWinPerRound(player) {

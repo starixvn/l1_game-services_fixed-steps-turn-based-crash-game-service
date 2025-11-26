@@ -9,7 +9,7 @@ export default {
             secret: "gameserver@20luminet&",
         },
         useAuthenticate: true,
-        placeBetTimeout: 2000,
+        placeBetTimeout: 10000,
         requestTimeout: 10000, // 10s
         enabledApiLogs: true,
     },
@@ -33,12 +33,11 @@ export default {
     },
     enabledLogs: true,
     database: {
-        url: "mongodb://lmn_backend:LmnBackend%4022027@10.99.99.53:39220,10.99.99.54:39220,10.99.99.188:39220,10.99.99.187:39220/?replicaSet=SabaL2UAT&appName=crashgame",
+        url: "mongodb://lmn_backend:LmnBackend%4022027@10.146.34.28:39220/?replicaSet=SabaL2UAT&appName=crashgame",
         options: {
             dbName: "minigame",
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            auto_reconnect: true,
         },
     },
     sentry: {

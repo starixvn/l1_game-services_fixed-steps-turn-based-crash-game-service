@@ -2,19 +2,19 @@ export default {
     hostingPort: 5000,
     apiSettings: {
         enabledApi: true,
-        apiUrl: "http://l1-proxy.lumigame.com/game-api",
-        authUrl: "http://auth.lumigame.com",
+        apiUrl: "https://l2-proxy1.lumigame.com/game-api",
+        authUrl: "https://l2-auth1.lumigame.com",
         client: {
             id: "game-server",
             secret: "gameserver@20luminet&",
         },
         useAuthenticate: true,
         requestTimeout: 10000,
-        placeBetTimeout: 2000,
+        placeBetTimeout: 10000,
         enabledApiLogs: true,
     },
     authenticateSettings: {
-        url: "http://auth.lumigame.com",
+        url: "https://l2-auth1.lumigame.com",
         id: "game-services",
         secret: "gameservices@20luminet&",
         requestTimeout: 10000,
@@ -22,7 +22,7 @@ export default {
         audiences: ["api", "admin-api"],
     },
     userServiceSettings: {
-        url: "https://l1-proxy.lumigame.com/user",
+        url: "https://l2-proxy1.lumigame.com/user",
     },
     socketOptions: {
         pingInterval: 60 * 1000,
@@ -33,12 +33,11 @@ export default {
     },
     enabledLogs: true,
     database: {
-        url: "mongodb://lmn_backend:LmnBackend@10.10.50.12:39100,10.10.50.13:39100,10.10.50.14:39100/?replicaSet=L1Local",
+        url: "mongodb://127.0.0.1:27017/",
         options: {
             dbName: "minigame",
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            auto_reconnect: true,
         },
     },
     sentry: {
@@ -52,7 +51,7 @@ export default {
     chips: [1000, 500, 200, 100, 50, 10, 5, 1],
     maxQuickBets: 5,
     gameResultSettings: {
-        baseUrl: "https://l1-result2.lumigame.com",
+        baseUrl: "https://l2-result1.lumigame.com",
         id: "Game Service",
         key: "58148de3-b895-4f6b-82de-a35eed1b4b28",
     },

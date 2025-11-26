@@ -3,31 +3,25 @@ import { Table } from "sc-game-base";
 import { MaxCombinedClientSeeds } from "./constants";
 import {
     CashOutConsumer,
+    GameResultServiceConsumer,
     InGameConsumer,
+    MineConsumer,
     PlaceBetConsumer,
+    ProvablyFairConsumer,
+    RecentBetConsumer,
     SettleCashOutConsumer,
     SettleGameRoundConsumer,
     UnsettledRoundConsumer,
-    MineConsumer,
-    ProvablyFairConsumer,
-    GameResultServiceConsumer,
     UserDisconnectConsumer,
-    BigWinConsumer,
 } from "./consumers";
 import Bot from "./crons/bot";
 import GameCrons from "./crons/game-crons";
 import ProcessBetQueue from "./crons/process-bet-queue";
-import {
-    LiveGamePublisher,
-    PlaceBetPublisher,
-    RoundResultPublisher,
-    UserBetResultPublisher,
-    RecentBigWinPublisher,
-} from "./event-publishers";
-import { BetLogs, Bets, BigWins, Results, Rounds, tempBetLogs, tempBets, umInfo } from "./models";
+import { PlaceBetPublisher, RecentBetPublisher, RoundResultPublisher, UserBetResultPublisher } from "./event-publishers";
+import { BetLogs, RecentBets, Results, Rounds, roundRm, umInfo } from "./models";
+import { HistoryQuery } from "./query-apis";
 import { HttpRouter, SocketRouter } from "./routers";
 import UmInfoWatcher from "./watchers/um-info-watcher";
-import { HistoryQuery } from "./query-apis";
 
 const { asClass, asValue } = awilix;
 
@@ -60,7 +54,8 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             roundsRepository: asValue(Rounds(definition.configName)),
             resultsRepository: asValue(Results(definition.configName)),
             betLogsRepository: asValue(BetLogs(definition.configName)),
-            bigWinsRepository: asValue(BigWins(definition.configName)),
+            recentBetsRepository: asValue(RecentBets(definition.configName)),
+            roundRmRepository: asValue(roundRm(definition.configName)),
             umInfoRepository: asValue(umInfo()),
         });
     }
@@ -79,7 +74,7 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             provablyFairConsumer: asClass(ProvablyFairConsumer).singleton(),
             gameResultServiceConsumer: asClass(GameResultServiceConsumer).singleton().proxy(),
             userDisconnectConsumer: asClass(UserDisconnectConsumer).singleton().proxy(),
-            bigWinConsumer: asClass(BigWinConsumer).singleton(),
+            recentBetConsumer: asClass(RecentBetConsumer).singleton().proxy(),
         });
     }
 
@@ -90,7 +85,7 @@ export default class ContainerRegistry extends Table.TableContainerRegistry {
             placeBetPublisher: asClass(PlaceBetPublisher).singleton(),
             userBetResultPublisher: asClass(UserBetResultPublisher).singleton(),
             roundResultPublisher: asClass(RoundResultPublisher).singleton(),
-            recentBigWinPublisher: asClass(RecentBigWinPublisher).singleton(),
+            recentBetPublisher: asClass(RecentBetPublisher).singleton(),
         });
     }
 

@@ -6,7 +6,6 @@ const Schema = new mongoose.Schema({
     playerId: { type: String },
 
     id: { type: Number, required: true },
-    result: { type: Object, required: true },
     time: { type: Date, default: new Date() },
     exchangeRateId: { type: Number, required: true },
     tapCount: { type: Number, required: true },
@@ -17,14 +16,20 @@ const Schema = new mongoose.Schema({
     totalAmount: { type: Number, required: true },
     odds: { type: Object, required: true },
     betwin: { type: Number },
+    betWin: { type: Number },
     result: { type: Number },
     maxWin: { type: Number },
     reachMaxWin: { type: Boolean, default: false },
     settlementResult: { type: Array },
     paid: { type: Boolean, default: false },
     multiplier: { type: Number, required: true },
+    multiplierMode: { type: Number, default: 0 },
 });
 
 export default function (gameConfigName) {
     return mongoose.model(`${gameConfigName}_rounds`, Schema);
+}
+
+export function roundRm(gameConfigName) {
+    return mongoose.model(`${gameConfigName}_rounds_rm`, Schema);
 }

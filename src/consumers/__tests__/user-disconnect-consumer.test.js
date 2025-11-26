@@ -1,15 +1,19 @@
-import { Core } from "sc-game-base";
-import { Actions } from "../../constants";
-import { UserDisconnectConsumer } from "../user-disconnect-consumer";
 import { stub } from "jest-micro-auto-stub";
-import { SettleCashOutConsumer } from "../settle-cash-out-consumer";
+import { Core } from "sc-game-base";
+import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
+import { SettleCashOutConsumer, UserDisconnectConsumer } from "../../consumers";
 
+import Chance from "chance";
 describe("UserDisconnectConsumer", () => {
+    const chance = new Chance();
+
+    /** @type {UserDisconnectConsumer}*/
     let consumer;
     let gameData;
-    let baseEventPublisher;
-    let logService;
+    /** @type {BaseEventPublisher}*/
+    let publisher;
     let betLogsRepository;
+    /** @type {SettleCashOutConsumer}*/
     let settleCashOutConsumer;
     let socketClient;
 
@@ -18,8 +22,9 @@ describe("UserDisconnectConsumer", () => {
         gameData = {
             realPlayers: {},
         };
-        baseEventPublisher = {};
-        logService = {};
+        publisher = {
+            publishToAllUsersExceptSystem: jest.fn(),
+        };
         betLogsRepository = {};
         settleCashOutConsumer = stub(SettleCashOutConsumer);
         socketClient = {
@@ -31,8 +36,7 @@ describe("UserDisconnectConsumer", () => {
 
         consumer = new UserDisconnectConsumer({
             gameData,
-            baseEventPublisher,
-            logService,
+            publisher,
             betLogsRepository,
             settleCashOutConsumer,
         });
@@ -60,10 +64,30 @@ describe("UserDisconnectConsumer", () => {
         });
 
         describe("when player is found", () => {
-            const mockPlayer = { id: "test-socket-id" };
+            const mockPlayer = { id: "test-socket-id", profile: { name: "test-player" } };
 
             beforeEach(() => {
-                gameData.realPlayers[socketClient.id] = mockPlayer;
+                consumer.gameData = {
+                    realPlayers: {
+                        [socketClient.id]: mockPlayer,
+                    },
+                    provablyFair: {
+                        [mockPlayer.profile.name]: {
+                            serverSeed: chance.string(),
+                            serverSeedHash: chance.string(),
+                        },
+                    },
+                    ingame: {
+                        [mockPlayer.profile.name]: {
+                            betTracks: {},
+                        },
+                    },
+                    players: {
+                        [mockPlayer.UID]: {
+                            profile: mockPlayer.profile,
+                        },
+                    },
+                };
             });
 
             describe("with invalid cash out", () => {
@@ -106,7 +130,11 @@ describe("UserDisconnectConsumer", () => {
                     await consumer.consume(socketClient);
 
                     // Assert
-                    expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(mockPlayer, { action: Actions.CashOut });
+                    expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
+                        player: mockPlayer,
+                        isAutoCashOut: true,
+                        isUserDisconnect: true,
+                    });
                 });
 
                 it("should call super.consume after cash out", async () => {

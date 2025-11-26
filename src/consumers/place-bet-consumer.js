@@ -1,14 +1,20 @@
-import { Core } from "sc-game-base";
 import { helpers } from "sc-common";
-import { Actions } from "../constants";
+import { Core } from "sc-game-base";
+import { Actions, MultiplierModes } from "../constants";
+import noticeHelper from "../helpers/notice-helper";
 
 export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
     composeValidationCriteria(player, payload) {
         const bettingTimeValidationCriteria = this.composeBettingTimeValidationCriteria(player);
+        const multiplierModeValidationCriteria = this.composeMultiplierModeValidationCriteria(payload);
         const betAmountValidationCriteria = this.composeBetAmountValidationCriteria(player, payload.amount);
         const clientSeedValidationCriteria = this.composeClientSeedValidationCriteria(payload.clientSeed);
 
-        return bettingTimeValidationCriteria.concat(betAmountValidationCriteria, clientSeedValidationCriteria);
+        return bettingTimeValidationCriteria.concat(
+            multiplierModeValidationCriteria,
+            betAmountValidationCriteria,
+            clientSeedValidationCriteria
+        );
     }
 
     composeBettingTimeValidationCriteria(player) {
@@ -18,6 +24,15 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
         return [
             {
                 failure: !configs.enabled || !!runningRound,
+                notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
+            },
+        ];
+    }
+
+    composeMultiplierModeValidationCriteria(payload) {
+        return [
+            {
+                failure: !Object.values(MultiplierModes).includes(payload.multiplierMode),
                 notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
             },
         ];
@@ -63,13 +78,15 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
     }
 
     consume(player, payload) {
-        payload.action === Actions.Bet && this.gameData.roundId++;
+        if (payload.action === Actions.Bet) {
+            this.gameData.roundId++;
+        }
         Object.assign(payload, {
-            amount: payload.amount >> 0,
+            amount: payload.amount,
             receivedTime: new Date(),
             mode: payload.m ?? this.DisplayMode.Landscape,
             roundId: this.gameData.roundId,
-            clientSeed: payload.clientSeed, //TODO: remove default value
+            clientSeed: payload.clientSeed,
         });
 
         if (
@@ -107,7 +124,7 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
         const name = player.profile.name;
 
         if (!this.gameData.ingame[name]?.betTracks[Actions.Bet] || this.gameData.ingame[name]?.betTracks[Actions.CashOut]) {
-            this.publisher.publishToUser(player.UID, { endBet: -1, notice: helpers.noticeHelper.invalidMine });
+            this.publisher.publishToUser(player.UID, { endBet: -1, notice: noticeHelper.invalidMine });
             return false;
         }
 
@@ -126,6 +143,7 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
                 roundId: bet.roundId,
                 tapCount: 1,
                 multiplier: 1,
+                multiplierMode: bet.multiplierMode,
             };
         }
     }

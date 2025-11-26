@@ -1,18 +1,18 @@
 import { Systems } from "sc-game-base/src/constants/systems";
 import { EventConsumers } from "sc-game-base/src/table";
-import { ProvablyFairConsumer, BigWinConsumer } from "./index";
+import { ProvablyFairConsumer, RecentBetConsumer } from "./index";
 
 export class InGameConsumer extends EventConsumers.TableInGameConsumer {
     /**
      * @param {Object} dependencies
      * @param {ProvablyFairConsumer} dependencies.provablyFairConsumer
-     * @param {BigWinConsumer} dependencies.bigWinConsumer
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
      */
 
-    constructor({ definition, gameData, roundQuery, publisher, getBalance, userInfosRepository, provablyFairConsumer, bigWinConsumer }) {
+    constructor({ definition, gameData, roundQuery, publisher, getBalance, userInfosRepository, provablyFairConsumer, recentBetConsumer }) {
         super(definition, gameData, roundQuery, publisher, getBalance, userInfosRepository);
         this.provablyFairConsumer = provablyFairConsumer;
-        this.bigWinConsumer = bigWinConsumer;
+        this.recentBetConsumer = recentBetConsumer;
     }
 
     async consume(realPlayer) {
@@ -40,18 +40,25 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
         const settings = this.gameData.currencyGroupGames.find((x) => x.groupId.toString() === session.currencyGroupId);
 
         const { odds, enableFreeBet, crashConfig } = this.gameData.gameConfigs;
-        const gameConfigs = { ...settings, odds, enableFreeBet, maxWinPerRound: crashConfig.maxWinPerRound };
+
+        const gameConfigs = {
+            ...settings,
+            odds,
+            enableFreeBet,
+            maxWinPerRound: crashConfig.maxWinPerRound,
+            fixedStepsMultiplierConfigs: crashConfig.fixedStepsMultiplierConfigs,
+        };
         const players = realPlayer.session?.system === Systems.Mobi ? {} : this.buildPlayersPayload(realPlayer);
 
         await this.getBalance(realPlayer, true);
 
         const user = await this.getUserInfo(realPlayer.UID);
-        const recentBigWinningWinners = await this.bigWinConsumer.getRecentBigWinningWinners(realPlayer);
+        const recentBets = await this.recentBetConsumer.getRecentBets();
         return {
             gameConfigs,
             user,
             players,
-            recentBigWinningWinners,
+            recentBets,
         };
     }
 }

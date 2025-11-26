@@ -1,0 +1,454 @@
+# SC Game Base - Cursor Rules
+
+You are an expert Node.js developer working on a gaming service library called `sc-game-base`. This is a foundational library that provides base implementations for game services in a microservice architecture.
+
+## Project Context
+
+This is a **gaming service library** that provides:
+
+-   Base game application and startup logic
+-   Event-driven architecture with consumers and publishers
+-   Real-time communication via Socket.io
+-   Game round management with cron jobs
+-   Table-based gaming implementations
+-   Dependency injection with Awilix
+-   MongoDB integration with Mongoose
+
+## Architecture Patterns
+
+### Core Principles
+
+-   **Event-driven architecture**: Use event consumers for database updates, event publishers for client communication
+-   **Dependency injection**: Use Awilix container for managing dependencies
+-   **Modular design**: Separate core game logic from table-specific implementations
+-   **Microservice ready**: Design for distributed systems with API clients
+
+### Key Components
+
+-   **Game Data**: Central state management for game rounds
+-   **Game Definition**: Configuration and rules for specific games
+-   **Event Consumers**: Handle requests that update database (place-bet, settle-round)
+-   **Event Publishers**: Publish responses to clients via Socket.io
+-   **Query APIs**: Handle read-only operations (history, logs)
+-   **Cron Jobs**: Manage game rounds and automated tasks
+-   **Routers**: Handle HTTP and Socket.io routing
+
+## Code Style & Standards
+
+### JavaScript/Node.js
+
+-   Use **ES modules** (`import/export`) - this project uses `"type": "module"`
+-   Use **4 spaces** for indentation (never tabs)
+-   **140 character** line width maximum
+-   Use **class-based architecture** for main components
+-   Prefer **async/await** over promises
+-   Use **destructuring** for cleaner code
+-   Use **template literals** for string interpolation
+
+### File Organization
+
+```
+src/
+├── core/           # Core game functionality
+│   ├── crons/      # Game round management
+│   ├── event-consumers/  # Database update handlers
+│   ├── event-publishers/ # Client communication
+│   ├── helpers/    # Utility functions
+│   ├── models/     # Data models
+│   ├── query-apis/ # Read operations
+│   ├── routers/    # HTTP/Socket routing
+│   └── validators/ # Input validation
+├── table/          # Table-specific implementations
+└── constants/      # Application constants
+```
+
+### Naming Conventions
+
+-   **Classes**: PascalCase (e.g., `BaseGameCron`, `PlaceBetConsumer`)
+-   **Files**: kebab-case (e.g., `place-bet-consumer.js`, `base-game-cron.js`)
+-   **Variables/Functions**: camelCase (e.g., `gameData`, `settleRound`)
+-   **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_BET_AMOUNT`)
+
+## Dependencies & Libraries
+
+### Core Dependencies
+
+-   **Express**: HTTP server framework
+-   **Socket.io**: Real-time communication
+-   **Mongoose**: MongoDB ODM
+-   **Awilix**: Dependency injection
+-   **Cron**: Job scheduling
+-   **Lodash**: Utility functions
+
+### Gaming-Specific Libraries
+
+-   **sc-common**: Shared utilities and logging
+-   **sc-base-apis**: API client functions
+-   **sc-game-management-client**: Game management API
+-   **sc-instrument**: Monitoring and metrics
+
+### Testing
+
+-   **Jest**: Testing framework with custom configuration
+-   **jest-extended**: Additional matchers
+-   **jest-when**: Conditional mocking
+
+## Best Practices
+
+### Error Handling
+
+-   Always use try-catch blocks for async operations
+-   Log errors using `sc-common` logger
+-   Return meaningful error responses to clients
+-   Handle database connection failures gracefully
+
+### Performance
+
+-   Use MongoDB aggregation pipelines for complex queries
+-   Implement proper indexing strategies
+-   Cache frequently accessed data in GameData
+-   Use connection pooling for database operations
+
+### Security
+
+-   Validate all user inputs using validators
+-   Implement proper authentication checks
+-   Use CORS helper for domain validation
+-   Sanitize data before database operations
+
+### Testing
+
+-   Write unit tests for all business logic
+-   Mock external dependencies using Jest
+-   Test error scenarios and edge cases
+-   Maintain high test coverage
+
+### Testing Best Practices
+
+-   **Follow AAA Pattern**: Arrange, Act, Assert for clear test structure
+-   **One assertion per test**: Each test should verify a single behavior
+-   **Use descriptive test names**: Test names should explain what is being tested
+-   **Mock external dependencies**: Use Jest mocks for APIs, databases, and third-party services
+-   **Test edge cases**: Include boundary conditions and error scenarios
+-   **Maintain high test coverage**: Aim for >80% coverage on business logic
+-   **Use proper test setup**: Leverage Jest's setup and teardown hooks
+-   **Test async operations**: Properly handle promises and async/await in tests
+
+## Code Examples
+
+### Event Consumer Pattern
+
+```javascript
+export default class PlaceBetConsumer extends BaseEventConsumer {
+    constructor({ gameData, definition, logService }) {
+        super({ gameData, definition, logService });
+    }
+
+    async consume(player, { betChoice, amount, freeBet = false }) {
+        try {
+            // Validation logic
+            const validationResult = this.validateBet(player, betChoice, amount);
+            if (!validationResult.isValid) {
+                return this.createErrorResponse(validationResult.error);
+            }
+
+            // Business logic
+            await this.processBet(player, betChoice, amount, freeBet);
+
+            return this.createSuccessResponse();
+        } catch (error) {
+            this.logService.logError("Place bet failed", error);
+            return this.createErrorResponse("Internal server error");
+        }
+    }
+}
+```
+
+### Dependency Registration
+
+```javascript
+// In container-registry.js
+container.register({
+    placeBetConsumer: asClass(PlaceBetConsumer).singleton(),
+    gameData: asValue(new GameData()),
+    definition: asValue(gameDefinition),
+});
+```
+
+### Cron Job Pattern
+
+```javascript
+export default class BaseGameCron {
+    constructor({ definition, gameData, logService }) {
+        this.definition = definition;
+        this.gameData = gameData;
+        this.logService = logService;
+    }
+
+    start() {
+        const job = new cron.CronJob("* * * * * *", () => this.proceed());
+        job.start();
+    }
+
+    async proceed() {
+        // Game round logic
+    }
+}
+```
+
+## Common Patterns to Follow
+
+1. **Always inject dependencies** through constructor
+2. **Use GameData** for shared state management
+3. **Implement proper logging** with sc-common logger
+4. **Follow event-driven patterns** for game actions
+5. **Use async/await** consistently
+6. **Validate inputs** before processing
+7. **Handle errors gracefully** with meaningful messages
+8. **Write comprehensive tests** for all components
+
+## Avoid These Patterns
+
+-   Don't use `require()` - use ES6 imports
+-   Don't mutate props directly - use proper state management
+-   Don't hardcode configuration - use GameDefinition and GameData
+-   Don't skip error handling in async functions
+-   Don't write synchronous code for I/O operations
+-   Don't bypass the dependency injection container
+
+## When Adding New Features
+
+1. **Identify the component type** (consumer, publisher, cron, etc.)
+2. **Follow the established patterns** in similar components
+3. **Register dependencies** in container-registry.js
+4. **Add proper error handling** and logging
+5. **Write unit tests** with appropriate mocks
+6. **Update documentation** if adding public APIs
+7. **Consider performance implications** for real-time gaming
+
+Remember: This is a foundational library used by multiple game services. Changes should be backward compatible and well-tested.
+
+### Jest Testing Examples
+
+#### AAA Pattern with Event Consumer Testing
+
+```javascript
+describe("PlaceBetConsumer", () => {
+    let placeBetConsumer;
+    let mockGameData;
+    let mockDefinition;
+    let mockLogService;
+
+    beforeEach(() => {
+        // Arrange - Setup mocks and dependencies
+        mockGameData = {
+            ingame: {},
+            currencyGroupGames: [{ groupId: "123", minBet: 100, maxBet: 10000 }],
+            gameConfigs: { enableFreeBet: true },
+        };
+        mockDefinition = { choices: ["red", "black"] };
+        mockLogService = { logError: jest.fn() };
+
+        placeBetConsumer = new PlaceBetConsumer({
+            gameData: mockGameData,
+            definition: mockDefinition,
+            logService: mockLogService,
+        });
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should successfully place a valid bet", async () => {
+        // Arrange
+        const player = {
+            profile: { name: "testPlayer", minBet: 50, maxBet: 5000 },
+            session: { currencyGroupId: "123" },
+        };
+        const betData = { betChoice: "red", amount: 500, freeBet: false };
+
+        // Act
+        const result = await placeBetConsumer.consume(player, betData);
+
+        // Assert
+        expect(result.success).toBe(true);
+    });
+
+    it("should reject bet when amount exceeds maximum", async () => {
+        // Arrange
+        const player = {
+            profile: { name: "testPlayer", minBet: 50, maxBet: 5000 },
+            session: { currencyGroupId: "123" },
+        };
+        const betData = { betChoice: "red", amount: 15000, freeBet: false };
+
+        // Act
+        const result = await placeBetConsumer.consume(player, betData);
+
+        // Assert
+        expect(result.success).toBe(false);
+    });
+});
+```
+
+#### Mocking External Dependencies
+
+```javascript
+import { jest } from "@jest/globals";
+import { when } from "jest-when";
+
+// Mock sc-common logger
+jest.mock("sc-common", () => ({
+    logger: {
+        logError: jest.fn(),
+        logInfo: jest.fn(),
+    },
+}));
+
+// Mock API clients
+jest.mock("sc-base-apis", () => ({
+    placeBet: jest.fn(),
+    getBalance: jest.fn(),
+    endGame: jest.fn(),
+}));
+
+describe("GameCron with API mocking", () => {
+    it("should handle API failure gracefully", async () => {
+        // Arrange
+        const mockApiClient = require("sc-base-apis");
+        when(mockApiClient.placeBet).calledWith(expect.any(Object)).mockRejectedValue(new Error("API Error"));
+
+        // Act & Assert
+        await expect(gameCron.proceed()).not.toThrow();
+        expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("API Error"));
+    });
+});
+```
+
+#### Testing Async Operations and Promises
+
+```javascript
+describe("SettleGameRoundConsumer", () => {
+    it("should settle round and update database", async () => {
+        // Arrange
+        const mockRound = { id: "round123", status: "active" };
+        const mockUpdateResult = { acknowledged: true };
+
+        jest.spyOn(consumer.roundsRepository, "updateOne").mockResolvedValue(mockUpdateResult);
+
+        // Act
+        const result = await consumer.settleRound(mockRound);
+
+        // Assert
+        expect(result).toEqual(mockUpdateResult);
+        expect(consumer.roundsRepository.updateOne).toHaveBeenCalledWith({ _id: "round123" }, { $set: { status: "settled" } });
+    });
+
+    it("should handle database connection errors", async () => {
+        // Arrange
+        const dbError = new Error("Connection timeout");
+        jest.spyOn(consumer.roundsRepository, "updateOne").mockRejectedValue(dbError);
+
+        // Act & Assert
+        await expect(consumer.settleRound({ id: "round123" })).rejects.toThrow("Connection timeout");
+    });
+});
+```
+
+#### Testing Game Logic with Edge Cases
+
+```javascript
+describe("BetValidation", () => {
+    const testCases = [
+        { amount: 0, expected: false, description: "zero amount" },
+        { amount: -100, expected: false, description: "negative amount" },
+        { amount: 50, expected: true, description: "valid minimum amount" },
+        { amount: 10000, expected: true, description: "valid maximum amount" },
+        { amount: 10001, expected: false, description: "amount exceeding maximum" },
+    ];
+
+    testCases.forEach(({ amount, expected, description }) => {
+        it(`should ${expected ? "accept" : "reject"} bet with ${description}`, () => {
+            // Arrange
+            const player = createMockPlayer();
+
+            // Act
+            const isValid = validator.validateBetAmount(player, amount);
+
+            // Assert
+            expect(isValid).toBe(expected);
+        });
+    });
+});
+```
+
+#### Testing Socket.io Events
+
+```javascript
+describe("GameStatusPublisher", () => {
+    let mockSocket;
+    let publisher;
+
+    beforeEach(() => {
+        mockSocket = {
+            emit: jest.fn(),
+            to: jest.fn().mockReturnThis(),
+            in: jest.fn().mockReturnThis(),
+        };
+        publisher = new GameStatusPublisher({ socket: mockSocket });
+    });
+
+    it("should emit game status to correct room", () => {
+        // Arrange
+        const gameStatus = { status: "betting", remainingTime: 30 };
+        const roomId = "game-room-123";
+
+        // Act
+        publisher.publishGameStatus(roomId, gameStatus);
+
+        // Assert
+        expect(mockSocket.to).toHaveBeenCalledWith(roomId);
+        expect(mockSocket.emit).toHaveBeenCalledWith("game-status", gameStatus);
+    });
+});
+```
+
+#### Testing Cron Jobs
+
+```javascript
+describe("BaseGameCron", () => {
+    let mockCronJob;
+    let gameCron;
+
+    beforeEach(() => {
+        mockCronJob = {
+            start: jest.fn(),
+            stop: jest.fn(),
+        };
+
+        // Mock cron constructor
+        jest.spyOn(require("cron"), "CronJob").mockImplementation(() => mockCronJob);
+    });
+
+    it("should start cron job with correct schedule", () => {
+        // Arrange & Act
+        gameCron.start();
+
+        // Assert
+        expect(require("cron").CronJob).toHaveBeenCalledWith("* * * * * *", expect.any(Function));
+        expect(mockCronJob.start).toHaveBeenCalled();
+    });
+
+    it("should handle cron execution errors", async () => {
+        // Arrange
+        jest.spyOn(gameCron, "proceed").mockRejectedValue(new Error("Cron error"));
+
+        // Act
+        await gameCron.proceed();
+
+        // Assert
+        expect(mockLogService.logError).toHaveBeenCalledWith(expect.stringContaining("Cron error"));
+    });
+});
+```

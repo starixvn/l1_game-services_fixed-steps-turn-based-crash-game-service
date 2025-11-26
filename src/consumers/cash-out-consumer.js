@@ -1,5 +1,5 @@
 import { BaseEventConsumers } from "sc-game-base/src/core";
-import { Actions, MaxDeltaTime } from "../constants";
+import { Actions } from "../constants";
 import noticeHelper from "../helpers/notice-helper";
 
 export class CashOutConsumer extends BaseEventConsumers.PlaceBetConsumer {

@@ -1,8 +1,7 @@
 import { PlaceBetConsumer } from "sc-game-base/src/core/event-consumers";
 import { Actions } from "../constants";
-import { calculateIncrement, generateTapResult } from "../helpers/crash-point-helper";
+import { generateTapResult, getNextMultiplier } from "../helpers/crash-point-helper";
 import noticeHelper from "../helpers/notice-helper";
-import { roundFloat } from "../helpers/number-helper";
 import { SettleCashOutConsumer } from "./settle-cash-out-consumer";
 
 export class MineConsumer extends PlaceBetConsumer {
@@ -36,7 +35,7 @@ export class MineConsumer extends PlaceBetConsumer {
             const playerGameData = this.gameData.ingame[playerName];
             const activeBet = playerGameData.activeBet;
 
-            await this.handleMine(player, activeBet, payload.clientSendTime);
+            await this.handleMine(player, activeBet, payload);
         } catch (err) {
             this.logService.logError(err);
             this.publishMineFailed(player, noticeHelper.invalidMine);
@@ -66,16 +65,22 @@ export class MineConsumer extends PlaceBetConsumer {
         };
     }
 
-    async handleMine(player, activeBet, clientSendTime) {
+    async handleMine(player, activeBet, payload) {
         const playerName = player.profile.name;
         const ingameData = this.gameData.ingame[playerName];
         const provablyFair = this.gameData.provablyFair[playerName];
         const multiplier = ingameData.activeBet.currentMultiplier;
-        const increment = calculateIncrement(multiplier, this.gameData.gameConfigs.crashConfig.multiplierConfigs);
-        let updatedMultiplier = 0;
+        const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
+        const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === activeBet.multiplierMode);
+        let updatedMultiplier = getNextMultiplier(multiplier, currentMultiplierConfig);
+        const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
-        if (multiplier < this.gameData.gameConfigs.crashConfig.maxMultiplier) {
-            updatedMultiplier = roundFloat(multiplier + increment);
+        if (multiplier === maxMultiplier) {
+            this.publishMineFailed(player, noticeHelper.invalidMine);
+            return;
+        }
+
+        if (multiplier < maxMultiplier) {
             updatedMultiplier = updatedMultiplier > provablyFair.finalResult ? 0 : updatedMultiplier;
         }
 
@@ -84,8 +89,7 @@ export class MineConsumer extends PlaceBetConsumer {
         const result = provablyFair.finalResult;
 
         await this.insertMineBetLog(player, activeBet, {
-            clientSendTime,
-            increment,
+            clientSendTime: payload.clientSendTime,
             result,
             updatedMultiplier,
         });
@@ -97,12 +101,12 @@ export class MineConsumer extends PlaceBetConsumer {
             reachMaxWin: updatedMultiplier * activeBet.amount >= activeBet.maxWin,
         });
 
-        if (updatedMultiplier == 0) {
-            await this.settleCashOutConsumer.proceedCashOut(player, true);
+        if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
+            await this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true });
         }
     }
 
-    async insertMineBetLog(player, activeBet, { clientSendTime, increment, result, updatedMultiplier }) {
+    async insertMineBetLog(player, activeBet, { clientSendTime, result, updatedMultiplier }) {
         const newBetLog = {
             uid: player.UID,
             name: player.profile.name,
@@ -113,10 +117,10 @@ export class MineConsumer extends PlaceBetConsumer {
             clientSendTime: clientSendTime,
             receivedTime: new Date(),
             freeBet: false,
-            increment,
             result: generateTapResult(result),
             multiplier: updatedMultiplier,
             roundId: activeBet.roundId,
+            multiplierMode: activeBet.multiplierMode,
         };
 
         if (player.session) {
@@ -144,6 +148,4 @@ export class MineConsumer extends PlaceBetConsumer {
             notice: { errorCode },
         });
     }
-
-    resetAllBotData() {}
 }

@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
+import { BaseEventPublisher } from "sc-game-base/src/core/event-publishers";
 import { Actions } from "../constants";
+import { RecentBetPublisher } from "../event-publishers";
 import helpers from "../helpers/notice-helper";
-import { isBigWin } from "../helpers/result-helper";
-import BigWinConsumer from "./big-win-consumer";
+import RecentBetConsumer from "./recent-bet-consumer";
 import { SettleGameRoundConsumer } from "./settle-game-round-consumer";
-import { RecentBigWinPublisher } from "../event-publishers";
 
 export class SettleCashOutConsumer {
     /**
@@ -14,71 +14,69 @@ export class SettleCashOutConsumer {
      * @param {BaseEventPublisher} dependencies.publisher
      * @param {logger} dependencies.logService
      * @param {mongoose.Model} dependencies.betLogsRepository
-     * @param {BigWinConsumer} dependencies.bigWinConsumer
-     * @param {RecentBigWinPublisher} dependencies.recentBigWinPublisher
+     * @param {RecentBetConsumer} dependencies.recentBetConsumer
+     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      */
-    constructor({ gameData, settleGameRoundConsumer, publisher, logService, betLogsRepository, bigWinConsumer, recentBigWinPublisher }) {
+    constructor({ gameData, settleGameRoundConsumer, publisher, logService, betLogsRepository, recentBetConsumer, recentBetPublisher }) {
         this.gameData = gameData;
         this.settleGameRoundConsumer = settleGameRoundConsumer;
         this.publisher = publisher;
         this.logService = logService;
         this.betLogsRepository = betLogsRepository;
-        this.bigWinConsumer = bigWinConsumer;
-        this.recentBigWinPublisher = recentBigWinPublisher;
+        this.recentBetConsumer = recentBetConsumer;
+        this.recentBetPublisher = recentBetPublisher;
     }
 
     validateCashOut(player) {
         const playerData = this.gameData.ingame[player.profile.name];
         const betTracks = playerData?.betTracks;
-        const isHavingBet = betTracks?.[Actions.Bet];
-
-        return isHavingBet;
+        return betTracks?.[Actions.Bet];
     }
 
-    async proceedCashOut(player, isAutoCashOut = false) {
+    async proceedCashOut({ player, isAutoCashOut = false, isUserDisconnect = false }) {
         const isValidCashOut = this.validateCashOut(player) || isAutoCashOut;
         const bet = this.getCashOutBet(player);
 
         if (!isValidCashOut || !bet || !this.isValidCashOutBet(bet)) {
             this.publisher.publishToUser(player.UID, { endBet: -1, notice: helpers.invalidCashOut });
-
-            return null;
+            return;
         }
 
-        const { multiplier, roundId, tapCount, amount } = bet;
+        const { multiplier, roundId, tapCount, amount, multiplierMode } = bet;
 
-        await this.insertBetLog(player, roundId, { multiplier, roundId, tapCount, amount, isAutoCashOut });
-        this.updateGameData(player, { multiplier, roundId, tapCount });
+        await this.insertBetLog(player, roundId, { multiplier, roundId, tapCount, amount, isAutoCashOut, multiplierMode });
+        this.updateGameData(player, { multiplier, roundId, tapCount, multiplierMode });
 
         const winningAmount = await this.settleGameRoundConsumer.settleRound({
             roundId,
             time: new Date(),
             player,
             playerName: player.profile.name,
+            isUserDisconnect,
         });
 
-        if (isBigWin(multiplier)) {
-            const rate = this.calculateCurrencyRate(player.session);
+        const rate = this.calculateCurrencyRate(player.session);
+        const baseWinningAmount = winningAmount * rate;
+        if (!isUserDisconnect) {
             const baseAmount = amount * rate;
-            const baseWinningAmount = winningAmount * rate;
-            const recentBigWinningWinner = await this.bigWinConsumer.add(player, {
-                roundId,
-                amount,
-                baseAmount,
-                winningAmount,
-                baseWinningAmount,
-                multiplier,
-                rate,
-            });
-            this.recentBigWinPublisher.publish(recentBigWinningWinner);
+            if (winningAmount > 0) {
+                await this.recentBetConsumer.add(player, {
+                    roundId,
+                    amount,
+                    baseAmount,
+                    rate,
+                    winningAmount,
+                    baseWinningAmount,
+                    multiplier,
+                });
+            }
         }
-        return { player, multiplier, roundId, tapCount, amount };
     }
 
     isValidCashOutBet(bet) {
-        const { roundId, tapCount, amount } = bet;
+        const { roundId, tapCount, amount, multiplierMode } = bet;
 
-        return roundId && tapCount && amount;
+        return roundId && tapCount && amount && multiplierMode;
     }
 
     getCashOutBet(player) {
@@ -93,6 +91,7 @@ export class SettleCashOutConsumer {
             tapCount: activeBet.tapCount,
             roundId: activeBet.roundId,
             amount: activeBet.amount,
+            multiplierMode: activeBet.multiplierMode,
         };
     }
 
@@ -106,6 +105,7 @@ export class SettleCashOutConsumer {
             multiplier: bet.multiplier,
             roundId: bet.roundId,
             tapCount: bet.tapCount,
+            multiplierMode: bet.multiplierMode,
         };
     }
 
@@ -125,6 +125,7 @@ export class SettleCashOutConsumer {
             winAmount: bet.amount * bet.multiplier,
             tapCount: bet.tapCount,
             isAutoCashOut: bet.isAutoCashOut,
+            multiplierMode: bet.multiplierMode,
         };
 
         if (player.session) {

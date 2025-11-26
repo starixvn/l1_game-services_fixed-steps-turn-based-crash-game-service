@@ -1,5 +1,5 @@
-import { ServerSeedHelper, SeedHelper } from "sc-game-base/src/core/helpers";
-import { encrypt, decrypt } from "../helpers/crypto-helper";
+import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
+import { decrypt, encrypt } from "../helpers/crypto-helper";
 import { roundFloat } from "../helpers/number-helper";
 
 export class ProvablyFairConsumer {
@@ -72,18 +72,6 @@ export class ProvablyFairConsumer {
                 time: new Date(),
             });
         }
-    }
-
-    async readResultRecord(playerName, roundId) {
-        const record = await this.findResultRecord(roundId);
-        const provablyFair = {
-            hash: record.hash,
-            clientSeed: record.clientSeed,
-            finalResult: JSON.parse(decrypt(record.encryptedFinalResult)),
-        };
-        this.gameData.provablyFair[playerName] = provablyFair;
-
-        return provablyFair.finalResult;
     }
 
     async findResultRecord(roundId) {

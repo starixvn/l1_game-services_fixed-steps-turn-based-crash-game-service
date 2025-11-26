@@ -10,7 +10,6 @@ const Schema = new mongoose.Schema({
     multiplier: { type: Number, default: 0 },
     receivedTime: { type: Date, required: true },
     reachMaxWin: { type: Boolean, default: false },
-    increment: { type: Number, default: 0 },
     result: { type: Boolean, default: false },
     isAutoCashOut: { type: Boolean, default: false },
 
@@ -27,11 +26,8 @@ const Schema = new mongoose.Schema({
     playerId: { type: String },
     operatorId: { type: String, required: true },
     roundId: { type: Number, default: 0, required: true },
+    multiplierMode: { type: Number, default: 0 },
 });
-
-export function tempBetLogs(gameConfigName) {
-    return mongoose.model(`${gameConfigName}_tmpbetlogs`, Schema);
-}
 
 export default function (gameConfigName) {
     return mongoose.model(`${gameConfigName}_betlogs`, Schema);

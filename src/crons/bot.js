@@ -1,30 +1,24 @@
 import Chance from "chance";
 import { helpers, logger } from "sc-common";
 import { Table } from "sc-game-base";
-import { Systems } from "sc-game-base/src/constants";
 import { SeedHelper, ServerSeedHelper } from "sc-game-base/src/core/helpers";
-import { Actions } from "../constants";
-import { BigWinConsumer } from "../consumers";
-import { RecentBigWinPublisher } from "../event-publishers";
-import { calculateIncrement } from "../helpers/crash-point-helper";
-import { roundFloat } from "../helpers/number-helper";
-import { isBigWin } from "../helpers/result-helper";
 import * as util from "util";
+import { Actions } from "../constants";
+import { RecentBetConsumer } from "../consumers";
+import { getNextMultiplier } from "../helpers/crash-point-helper";
 
-export default class GameBot extends Table.Crons.TableGameBot {
+export default class Bot extends Table.Crons.TableGameBot {
     /**
-     * @param {BigWinConsumer} bigWinConsumer
-     * @param {RecentBigWinPublisher} recentBigWinPublisher
+     * @param {RecentBetConsumer} recentBetConsumer
      */
-    constructor(definition, gameData, publisher, userInfosRepository, bigWinConsumer, recentBigWinPublisher) {
+    constructor(definition, gameData, publisher, userInfosRepository, recentBetConsumer) {
         super(definition, gameData, publisher, userInfosRepository);
         this.chance = new Chance();
         this.activeBots = new Map();
         this.minBotsAtTheTable = 4;
         this.maxBotsAtTheTable = 8;
         this.activeTimeouts = new Set();
-        this.bigWinConsumer = bigWinConsumer;
-        this.recentBigWinPublisher = recentBigWinPublisher;
+        this.recentBetConsumer = recentBetConsumer;
     }
 
     async run() {
@@ -65,10 +59,9 @@ export default class GameBot extends Table.Crons.TableGameBot {
     }
 
     async placeBet(botId) {
-        this.gameData.roundId += 1;
         const maxBet = this.getMaxBet(this.botsInRoom[botId]);
         const minBet = this.getMinBet();
-        const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, true));
+        const betAmount = this.convertAmountToChip(helpers.numberHelper.getRandomNumberStep5(minBet, maxBet, false));
 
         const user = await this.userInfosRepository.findOneAndUpdate(
             { id: botId, red: { $gt: betAmount } },
@@ -77,12 +70,18 @@ export default class GameBot extends Table.Crons.TableGameBot {
         );
 
         if (user) {
+            const roundId = (this.gameData.roundId += 1);
             const serverSeed = ServerSeedHelper.generateServerSeed();
             const finalHash = SeedHelper.getSHA512Hash(serverSeed);
             const result = this.definition.generateResult(finalHash);
-            const multiplier = result > 1 ? 1.01 : 0;
 
-            this.updateBalanceAndPublishBetPayload(botId, multiplier, betAmount, user.red);
+            const multiplierMode = this.chance.integer({ min: 1, max: 4 });
+            const currentMultiplierConfig = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs.find(
+                (config) => config.mode === multiplierMode
+            );
+            const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
+            const multiplier = result > firstMultiplier ? firstMultiplier : 0;
+            user.profile = { name: user.name };
 
             this.activeBots.set(botId, {
                 amount: betAmount,
@@ -90,47 +89,33 @@ export default class GameBot extends Table.Crons.TableGameBot {
                 multiplier,
                 tapCount: 1,
                 lastActionTime: Date.now(),
+                multiplierMode,
+                roundId,
             });
 
-            if (multiplier == 0) {
+            if (multiplier === 0) {
                 await this.handleCashout(botId);
             }
         }
     }
 
-    updateBalanceAndPublishBetPayload(botId, multiplier, amount, balance) {
-        if (this.gameData.players[botId]) {
-            this.gameData.players[botId].red = balance;
-        }
-
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerChip: {
-                playerId: botId,
-                rate: 1,
-                multiplier: multiplier,
-                amount: amount,
-                red: balance,
-            },
-        });
-    }
-
     async handleBotActions(botId) {
         try {
+            const action = this.getAction(botId);
+
+            switch (action) {
+                case Actions.Bet:
+                    await this.placeBet(botId);
+                    break;
+                case Actions.Mine:
+                    await this.handleMining(botId);
+                    break;
+                case Actions.CashOut:
+                    await this.handleCashout(botId);
+                    break;
+            }
         } catch (error) {
             logger.logError(error);
-        }
-        const action = this.getAction(botId);
-
-        switch (action) {
-            case Actions.Bet:
-                await this.placeBet(botId);
-                break;
-            case Actions.Mine:
-                await this.handleMining(botId);
-                break;
-            case Actions.CashOut:
-                await this.handleCashout(botId);
-                break;
         }
     }
 
@@ -166,8 +151,9 @@ export default class GameBot extends Table.Crons.TableGameBot {
 
     async handleMining(botId) {
         const botState = this.activeBots.get(botId);
-        const increment = calculateIncrement(botState.multiplier, this.gameData.gameConfigs.crashConfig.multiplierConfigs);
-        let updatedMultiplier = roundFloat(botState.multiplier + increment);
+        const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
+        const currentMultiplierConfig = fixedStepsMultiplierConfigs.find((config) => config.mode === botState.multiplierMode);
+        let updatedMultiplier = getNextMultiplier(botState.multiplier, currentMultiplierConfig);
         updatedMultiplier = updatedMultiplier > 1000 || updatedMultiplier > botState.result ? 0 : updatedMultiplier;
         botState.hasMined = true;
         botState.lastActionTime = Date.now();
@@ -175,11 +161,9 @@ export default class GameBot extends Table.Crons.TableGameBot {
         botState.tapCount++;
         this.activeBots.set(botId, botState);
 
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            playerMine: { playerId: botId, multiplier: updatedMultiplier },
-        });
+        const maxMultiplier = currentMultiplierConfig.multiplierSteps.at(-1);
 
-        if (updatedMultiplier == 0) {
+        if (updatedMultiplier === 0 || updatedMultiplier === maxMultiplier) {
             await this.handleCashout(botId);
         }
     }
@@ -187,36 +171,32 @@ export default class GameBot extends Table.Crons.TableGameBot {
     async handleCashout(botId) {
         const botState = this.activeBots.get(botId);
 
-        let recentBigWinningWinner = {};
         const multiplier = botState.multiplier;
         const rate = this.botRate;
         const amount = botState.amount;
-        const baseAmount = amount * rate;
         const winningAmount = multiplier * amount;
         const baseWinningAmount = winningAmount * rate;
 
+        const roundId = botState.roundId;
         const user = await this.userInfosRepository.findOneAndUpdate({ id: botId }, { $inc: { red: +winningAmount } });
 
         if (this.gameData.players[botId]) {
             this.gameData.players[botId].red = user.red;
             user.profile = { name: user.name };
         }
-        if (isBigWin(multiplier)) {
-            recentBigWinningWinner = await this.bigWinConsumer.add(user, {
-                roundId: this.gameData.roundId,
-                amount,
-                baseAmount,
+
+        const baseAmount = amount * rate;
+        if (winningAmount > 0) {
+            await this.recentBetConsumer.add(user,{
+                roundId,
                 winningAmount,
                 baseWinningAmount,
                 multiplier,
+                amount,
+                baseAmount,
                 rate,
             });
-            this.recentBigWinPublisher.publish(recentBigWinningWinner);
         }
-
-        this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, null, {
-            winners: { playerId: botId, bet: winningAmount, rate, reachMaxWin: false, win: winningAmount > 0 },
-        });
 
         this.activeBots.delete(botId);
     }
