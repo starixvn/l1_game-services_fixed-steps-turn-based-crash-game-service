@@ -55,23 +55,29 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     }
 
     dequeueBets() {
-        if (this.gameData.ingame) {
-            Object.values(this.gameData.ingame).forEach((playerInGame) => {
-                if (!playerInGame.betProcessing && playerInGame.betQueue && playerInGame.betQueue.length > 0) {
-                    const self = this;
-                    const { player, payload } = playerInGame.betQueue.shift();
-
-                    playerInGame.betProcessing = true;
-
-                    tracer.startActiveSpan("dequeueBet", async (span) => {
-                        self.proceedActions(player, payload)
-                            .then(() => (playerInGame.betProcessing = false))
-                            .catch(self.logService.logError)
-                            .finally(() => span.end());
-                    });
-                }
-            });
+        if (!this.gameData.ingame) {
+            return;
         }
+
+        // Filter first to only process players with pending bets
+        const playersWithPendingBets = Object.entries(this.gameData.ingame)
+            .filter(([_, playerInGame]) => 
+                !playerInGame.betProcessing && 
+                playerInGame.betQueue?.length > 0
+            );
+
+        playersWithPendingBets.forEach(([_, playerInGame]) => {
+            const { player, payload } = playerInGame.betQueue.shift();
+
+            playerInGame.betProcessing = true;
+
+            tracer.startActiveSpan("dequeueBet", async (span) => {
+                this.proceedActions(player, payload)
+                    .then(() => (playerInGame.betProcessing = false))
+                    .catch(this.logService.logError)
+                    .finally(() => span.end());
+            });
+        });
     }
 
     async validateBetRequest(player, payload) {
@@ -120,9 +126,11 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
         const currentMultiplier = this.gameData.provablyFair[playerName].finalResult > firstMultiplier ? firstMultiplier : 0;
 
-        await this.provablyFairConsumer.createResultRecord(player.profile.name, roundId);
-        await this.insertBet(player, roundId, bet, rate, currentMultiplier);
-        await this.insertBetLog(player, roundId, bet, currentMultiplier);
+        await Promise.all([
+            this.provablyFairConsumer.createResultRecord(player.profile.name, roundId),
+            this.insertBet(player, roundId, bet, rate, currentMultiplier),
+            this.insertBetLog(player, roundId, bet, currentMultiplier),
+        ]);
 
         this.gameData.ingame[playerName].activeBet = { ...bet, currentMultiplier, tapCount: 1, maxWin: this.getMaxWinPerRound(player) };
 
