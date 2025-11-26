@@ -25,13 +25,16 @@ export default class RecentBetConsumer {
      * @param {number} data.baseAmount
      * @param {number} data.rate
      */
-    async add(player, { roundId, amount, baseAmount, rate }) {
+    async add(player, { roundId, amount, baseAmount, rate, winningAmount, baseWinningAmount, multiplier }) {
         const recentBet = {
             roundId,
             name: player.profile.name,
             amount,
             baseAmount,
             rate,
+            winningAmount,
+            baseWinningAmount,
+            multiplier,
             time: new Date(),
             exchangeRateId: this.gameData.exchangeRates.exId,
         };

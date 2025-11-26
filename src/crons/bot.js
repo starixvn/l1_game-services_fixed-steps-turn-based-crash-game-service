@@ -93,15 +93,6 @@ export default class Bot extends Table.Crons.TableGameBot {
                 roundId,
             });
 
-            const rate = this.botRate;
-            const baseAmount = betAmount * rate;
-            await this.recentBetConsumer.add(user, {
-                roundId,
-                amount: betAmount,
-                baseAmount,
-                rate,
-            });
-
             if (multiplier === 0) {
                 await this.handleCashout(botId);
             }
@@ -194,12 +185,18 @@ export default class Bot extends Table.Crons.TableGameBot {
             user.profile = { name: user.name };
         }
 
-        await this.recentBetConsumer.update({
-            roundId,
-            winningAmount,
-            baseWinningAmount,
-            multiplier,
-        });
+        const baseAmount = amount * rate;
+        if (winningAmount > 0) {
+            await this.recentBetConsumer.add(user,{
+                roundId,
+                winningAmount,
+                baseWinningAmount,
+                multiplier,
+                amount,
+                baseAmount,
+                rate,
+            });
+        }
 
         this.activeBots.delete(botId);
     }

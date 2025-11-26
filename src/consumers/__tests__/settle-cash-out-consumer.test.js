@@ -312,20 +312,14 @@ describe("SettleCashOutConsumer", () => {
                 consumer.settleGameRoundConsumer.settleRound.mockResolvedValue(150);
             });
 
-            it("should return player with bet details", async () => {
+            it("should complete successfully without errors", async () => {
                 // Arrange
 
-                // Act
-                const result = await consumer.proceedCashOut({ player: realPlayer });
-
-                // Assert
-                expect(result).toEqual({
-                    player: realPlayer,
-                    multiplier: betDetails.multiplier,
-                    roundId: betDetails.roundId,
-                    tapCount: betDetails.tapCount,
-                    amount: betDetails.amount,
-                });
+                // Act & Assert
+                await expect(consumer.proceedCashOut({ player: realPlayer })).resolves.not.toThrow();
+                expect(consumer.insertBetLog).toHaveBeenCalled();
+                expect(consumer.updateGameData).toHaveBeenCalled();
+                expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalled();
             });
 
             it("should insert bet log with correct details", async () => {
@@ -373,23 +367,57 @@ describe("SettleCashOutConsumer", () => {
             });
 
             describe("and has recent bet", () => {
-                it("should update recent bet with correct params", async () => {
+                it("should call recentBetConsumer.add when winningAmount > 0", async () => {
                     // Arrange
                     betDetails.multiplier = 2;
+                    betDetails.amount = 50;
                     consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
                     consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
-                    consumer.recentBetConsumer.update = jest.fn().mockResolvedValue();
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
 
                     // Act
                     await consumer.proceedCashOut({ player: realPlayer });
 
                     // Assert
-                    expect(consumer.recentBetConsumer.update).toHaveBeenCalledWith({
+                    expect(consumer.recentBetConsumer.add).toHaveBeenCalledWith(realPlayer, {
                         roundId: betDetails.roundId,
+                        amount: betDetails.amount,
+                        baseAmount: 50, // 50 * 1.0
+                        rate: 1.0,
                         winningAmount: 100,
                         baseWinningAmount: 100, // 100 * 1.0
                         multiplier: betDetails.multiplier,
                     });
+                });
+
+                it("should not call recentBetConsumer.add when winningAmount is 0", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    betDetails.amount = 50;
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(0);
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer });
+
+                    // Assert
+                    expect(consumer.recentBetConsumer.add).not.toHaveBeenCalled();
+                });
+
+                it("should not call recentBetConsumer.add when isUserDisconnect is true", async () => {
+                    // Arrange
+                    betDetails.multiplier = 2;
+                    betDetails.amount = 50;
+                    consumer.calculateCurrencyRate = jest.fn().mockReturnValue(1.0);
+                    consumer.settleGameRoundConsumer.settleRound = jest.fn().mockResolvedValue(100);
+                    consumer.recentBetConsumer.add = jest.fn().mockResolvedValue();
+
+                    // Act
+                    await consumer.proceedCashOut({ player: realPlayer, isUserDisconnect: true });
+
+                    // Assert
+                    expect(consumer.recentBetConsumer.add).not.toHaveBeenCalled();
                 });
             });
 
