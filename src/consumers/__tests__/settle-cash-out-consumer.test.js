@@ -249,18 +249,6 @@ describe("SettleCashOutConsumer", () => {
                 jest.spyOn(consumer.publisher, "publishToUser");
             });
 
-            it("should return null", async () => {
-                // Arrange
-
-                consumer.validateCashOut.mockReturnValue(false);
-
-                // Act
-                const result = await consumer.proceedCashOut({ player: realPlayer });
-
-                // Assert
-                expect(result).toBeNull();
-            });
-
             it("should publish invalid notice", async () => {
                 // Arrange
 
@@ -464,16 +452,15 @@ describe("SettleCashOutConsumer", () => {
         });
 
         describe("when getCashOutBet returns null", () => {
-            it("should return null without further processing", async () => {
+            it("should not proceed with further processing", async () => {
                 // Arrange
                 consumer.validateCashOut.mockReturnValue(true);
                 consumer.getCashOutBet.mockReturnValue(null);
 
                 // Act
-                const result = await consumer.proceedCashOut({ player: realPlayer });
+                await consumer.proceedCashOut({ player: realPlayer });
 
                 // Assert
-                expect(result).toBeNull();
                 expect(consumer.insertBetLog).not.toHaveBeenCalled();
                 expect(consumer.updateGameData).not.toHaveBeenCalled();
             });

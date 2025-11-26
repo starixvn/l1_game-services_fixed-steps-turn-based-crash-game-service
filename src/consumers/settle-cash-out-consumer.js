@@ -39,8 +39,7 @@ export class SettleCashOutConsumer {
 
         if (!isValidCashOut || !bet || !this.isValidCashOutBet(bet)) {
             this.publisher.publishToUser(player.UID, { endBet: -1, notice: helpers.invalidCashOut });
-
-            return null;
+            return;
         }
 
         const { multiplier, roundId, tapCount, amount, multiplierMode } = bet;
