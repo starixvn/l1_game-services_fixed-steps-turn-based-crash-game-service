@@ -581,7 +581,7 @@ describe("GameBots", () => {
         it("should use weighted selection when bot state exists", () => {
             // Arrange
             const bot = initBot();
-            const botState = { tapCount: 2 };
+            const botState = { tapCount: 2, multiplier: 2 };
             bot.activeBots.set("bot1", botState);
             bot.chance.weighted = jest.fn().mockReturnValue("mine");
 
@@ -589,7 +589,7 @@ describe("GameBots", () => {
             const result = bot.getAction("bot1");
 
             // Assert
-            expect(bot.chance.weighted).toHaveBeenCalledWith(["mine", "cashOut", null], [73, 2, 29]);
+            expect(bot.chance.weighted).toHaveBeenCalledWith(["mine", "cashOut", null], [46, 50, 45]);
             expect(result).toBe("mine");
         });
     });

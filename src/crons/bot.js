@@ -149,10 +149,11 @@ export default class Bot extends Table.Crons.TableGameBot {
             const isBet = this.chance.bool({ likelihood: 30 });
             action = isBet ? Actions.Bet : null;
         } else {
-            action = this.chance.weighted(
-                [Actions.Mine, Actions.CashOut, null],
-                [75 - botState.tapCount, botState.tapCount, 25 + botState.tapCount * 2]
-            );
+            const multiplier = botState.multiplier;
+            const mineWeight = Math.max(0, 50 - multiplier * 2);
+            const cashOutWeight = 40 + multiplier * 5;
+            const waitWeight = 35 + multiplier * 5;
+            action = this.chance.weighted([Actions.Mine, Actions.CashOut, null], [mineWeight, cashOutWeight, waitWeight]);
         }
 
         return action;
