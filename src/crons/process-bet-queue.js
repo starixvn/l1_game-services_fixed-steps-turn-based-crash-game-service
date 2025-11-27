@@ -126,11 +126,9 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         const firstMultiplier = currentMultiplierConfig.multiplierSteps[0];
         const currentMultiplier = this.gameData.provablyFair[playerName].finalResult > firstMultiplier ? firstMultiplier : 0;
 
-        await Promise.all([
-            this.provablyFairConsumer.createResultRecord(player.profile.name, roundId),
-            this.insertBet(player, roundId, bet, rate, currentMultiplier),
-            this.insertBetLog(player, roundId, bet, currentMultiplier),
-        ]);
+        await this.provablyFairConsumer.createResultRecord(player.profile.name, roundId);
+        await this.insertBet(player, roundId, bet, rate, currentMultiplier);
+        await this.insertBetLog(player, roundId, bet, currentMultiplier);
 
         this.gameData.ingame[playerName].activeBet = { ...bet, currentMultiplier, tapCount: 1, maxWin: this.getMaxWinPerRound(player) };
 
