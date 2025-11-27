@@ -411,7 +411,7 @@ describe("GameBots", () => {
             expect(bot.handleCashout).not.toHaveBeenCalled();
         });
 
-        it("should not call recentBetConsumer.add during placeBet (only called in handleCashout)", async () => {
+        it("should call recentBetConsumer.add and recentBetPublisher.publish", async () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: { red: 1000 } };
@@ -423,7 +423,8 @@ describe("GameBots", () => {
             bot.definition.generateResult = jest.fn().mockReturnValue(2.5);
             bot.chance.integer = jest.fn().mockReturnValue(1); // Mock multiplierMode to 1
             bot.botRate = 1.0;
-            bot.recentBetConsumer.add = jest.fn();
+            const mockRecentBet = { id: "bet1", amount: 50, multiplier: 1.0 };
+            bot.recentBetConsumer.add = jest.fn().mockResolvedValue(mockRecentBet);
             const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
             userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
 
@@ -431,8 +432,20 @@ describe("GameBots", () => {
             await bot.placeBet("bot1");
 
             // Assert
-            // recentBetConsumer.add is only called in handleCashout, not in placeBet
-            expect(bot.recentBetConsumer.add).not.toHaveBeenCalled();
+            expect(bot.recentBetConsumer.add).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: "bot1",
+                    red: 1000,
+                    name: "Bot1",
+                    profile: { name: "Bot1" },
+                }),
+                {
+                    roundId: 2,
+                    amount: 50,
+                    baseAmount: 50, // betAmount * botRate = 50 * 1.0
+                    rate: 1.0,
+                }
+            );
         });
     });
 
@@ -773,7 +786,7 @@ describe("GameBots", () => {
         it("should calculate winning amounts", async () => {
             // Arrange
             const bot = initBot();
-            bot.recentBetConsumer.add = jest.fn().mockResolvedValue();
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
@@ -792,7 +805,7 @@ describe("GameBots", () => {
         it("should update player balance in gameData", async () => {
             // Arrange
             const bot = initBot();
-            bot.recentBetConsumer.add = jest.fn().mockResolvedValue();
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
@@ -809,58 +822,34 @@ describe("GameBots", () => {
             expect(bot.gameData.players["bot1"].red).toBe(1000);
         });
 
-        it("should call recentBetConsumer.add when winningAmount > 0", async () => {
+        it("should call update recent bet", async () => {
             // Arrange
             const bot = initBot();
-            bot.recentBetConsumer.add = jest.fn().mockResolvedValue();
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,
                 roundId: 1,
             });
             bot.botRate = 1.0;
-            const mockUser = { red: 1000, name: "Bot1", id: "bot1" };
-            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
+            userInfosRepository.findOneAndUpdate.mockResolvedValue({ red: 1000, name: "Bot1" });
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
-            expect(bot.recentBetConsumer.add).toHaveBeenCalledWith(mockUser, {
+            expect(bot.recentBetConsumer.update).toHaveBeenCalledWith({
                 roundId: 1,
                 winningAmount: 250, // 2.5 * 100
                 baseWinningAmount: 250, // 250 * 1.0
                 multiplier: 2.5,
-                amount: 100,
-                baseAmount: 100, // 100 * 1.0
-                rate: 1.0,
             });
-        });
-
-        it("should not call recentBetConsumer.add when winningAmount is 0", async () => {
-            // Arrange
-            const bot = initBot();
-            bot.recentBetConsumer.add = jest.fn().mockResolvedValue();
-            bot.activeBots.set("bot1", {
-                multiplier: 0,
-                amount: 100,
-                roundId: 1,
-            });
-            bot.botRate = 1.0;
-            const mockUser = { red: 1000, name: "Bot1", id: "bot1" };
-            userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
-
-            // Act
-            await bot.handleCashout("bot1");
-
-            // Assert
-            expect(bot.recentBetConsumer.add).not.toHaveBeenCalled();
         });
 
         it("should remove bot from activeBots", async () => {
             // Arrange
             const bot = initBot();
-            bot.recentBetConsumer.add = jest.fn().mockResolvedValue();
+            bot.recentBetConsumer.update = jest.fn().mockResolvedValue();
             bot.activeBots.set("bot1", {
                 multiplier: 2.5,
                 amount: 100,

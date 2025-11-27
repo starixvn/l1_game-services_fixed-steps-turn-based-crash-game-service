@@ -39,6 +39,7 @@ export class SettleCashOutConsumer {
 
         if (!isValidCashOut || !bet || !this.isValidCashOutBet(bet)) {
             this.publisher.publishToUser(player.UID, { endBet: -1, notice: helpers.invalidCashOut });
+
             return;
         }
 
@@ -56,20 +57,14 @@ export class SettleCashOutConsumer {
         });
 
         const rate = this.calculateCurrencyRate(player.session);
-        const baseWinningAmount = winningAmount * rate;
         if (!isUserDisconnect) {
-            const baseAmount = amount * rate;
-            if (winningAmount > 0) {
-                await this.recentBetConsumer.add(player, {
-                    roundId,
-                    amount,
-                    baseAmount,
-                    rate,
-                    winningAmount,
-                    baseWinningAmount,
-                    multiplier,
-                });
-            }
+            const baseWinningAmount = winningAmount * rate;
+            await this.recentBetConsumer.update({
+                roundId,
+                winningAmount,
+                baseWinningAmount,
+                multiplier,
+            });
         }
     }
 
