@@ -555,7 +555,7 @@ describe("GameBots", () => {
     });
 
     describe("getAction method", () => {
-        it("should return Bet action with 20% probability when no bot state", () => {
+        it("should return Bet action with 10% probability when no bot state", () => {
             // Arrange
             const bot = initBot();
             bot.activeBots.clear();
@@ -566,7 +566,7 @@ describe("GameBots", () => {
 
             // Assert
             expect(result).toBe("bet");
-            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 20 });
+            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 10 });
         });
 
         it("should return null when no bot state and not betting", () => {
@@ -596,9 +596,9 @@ describe("GameBots", () => {
             const result = bot.getAction("bot1");
 
             // Assert
-            // When below range, should return mine or null based on 50% chance
+            // When below range, should return mine or null based on 60% chance
             expect(result).toBe("mine");
-            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 50 });
+            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 60 });
         });
     });
 
@@ -1321,7 +1321,7 @@ describe("GameBots", () => {
 
             // Assert
             expect(result).toBe("bet");
-            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 20 });
+            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 10 });
         });
 
         it("should return Mine or null when below target range", () => {
@@ -1338,7 +1338,7 @@ describe("GameBots", () => {
 
             // Assert
             expect(result).toBe("mine");
-            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 50 });
+            expect(bot.chance.bool).toHaveBeenCalledWith({ likelihood: 60 });
         });
 
         it("should return null when below target range and chance is false", () => {
@@ -1373,7 +1373,7 @@ describe("GameBots", () => {
             expect(result).toBe("cashOut");
             expect(bot.chance.weighted).toHaveBeenCalledWith(
                 ["cashOut", "mine", null],
-                [35, 25, 40]
+                [35, 40, 25]
             );
         });
 

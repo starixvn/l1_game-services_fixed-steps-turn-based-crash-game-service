@@ -173,7 +173,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         let action = null;
 
         if (!botState) {
-            const isBet = this.chance.bool({ likelihood: 20 });
+            const isBet = this.chance.bool({ likelihood: 10 });
             action = isBet ? Actions.Bet : null;
         } else {
             const multiplier = botState.multiplier;
@@ -182,12 +182,12 @@ export default class Bot extends Table.Crons.TableGameBot {
 
             if (rangeStatus === RangeStatus.BELOW) {
                 // Below target range: randomly pick between mine and wait
-                action = this.chance.bool({ likelihood: 50 }) ? Actions.Mine : null;
+                action = this.chance.bool({ likelihood: 60 }) ? Actions.Mine : null;
             } else if (rangeStatus === RangeStatus.WITHIN) {
                 // Within target range: randomly pick between cash out, mine, and wait
                 action = this.chance.weighted(
                     [Actions.CashOut, Actions.Mine, null],
-                    [35, 25, 40] // 35% cash out, 40% mine, 25% wait
+                    [35, 40, 25] // 35% cash out, 40% mine, 25% wait
                 );
             } else {
                 // Above target range: must cash out
