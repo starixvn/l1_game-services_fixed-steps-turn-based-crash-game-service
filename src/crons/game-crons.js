@@ -77,10 +77,11 @@ export default class GameCron extends Core.Crons.BaseGameCron {
             .lean()
             .exec();
 
+        const increaseRoundId = 100;
         if (lastRound) {
-            this.gameData.roundId = lastRound.id + 1000;
+            this.gameData.roundId = lastRound.id + increaseRoundId;
         } else {
-            this.gameData.roundId = (await this.getLastArchiveRound()) + 1000;
+            this.gameData.roundId = (await this.getLastArchiveRound()) + increaseRoundId;
         }
     }
 
