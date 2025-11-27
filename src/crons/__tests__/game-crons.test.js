@@ -129,6 +129,7 @@ describe("GameCrons", () => {
         cron.getSettingForNewRound = jest.fn();
         cron.updateExchangeRates = jest.fn();
         cron.startCron = jest.fn();
+        cron.getLastArchiveRound = jest.fn();
     });
 
     afterEach(() => {
@@ -253,6 +254,46 @@ describe("GameCrons", () => {
         });
     });
 
+    describe("initRoundId", () => {
+        beforeEach(() => {
+            cron.initRoundId = GameCrons.prototype.initRoundId.bind(cron);
+        });
 
+        it("should set roundId to lastRound.id + 100 when lastRound exists", async () => {
+            // Arrange
+            const lastRoundId = 12345;
+            const mockQuery = {
+                lean: jest.fn().mockReturnThis(),
+                exec: jest.fn().mockResolvedValue({ id: lastRoundId })
+            };
+            roundsRepository.findOne.mockReturnValue(mockQuery);
+
+            // Act
+            await cron.initRoundId();
+
+            // Assert
+            expect(cron.gameData.roundId).toBe(lastRoundId + 100);
+            expect(roundsRepository.findOne).toHaveBeenCalledWith({}, "id", { sort: { id: -1 } });
+        });
+
+        it("should set roundId to archivedRoundId + 100 when no lastRound exists", async () => {
+            // Arrange
+            const archivedRoundId = 54321;
+            const mockQuery = {
+                lean: jest.fn().mockReturnThis(),
+                exec: jest.fn().mockResolvedValue(null)
+            };
+            roundsRepository.findOne.mockReturnValue(mockQuery);
+            cron.getLastArchiveRound.mockResolvedValue(archivedRoundId);
+
+            // Act
+            await cron.initRoundId();
+
+            // Assert
+            expect(cron.gameData.roundId).toBe(archivedRoundId + 100);
+            expect(roundsRepository.findOne).toHaveBeenCalledWith({}, "id", { sort: { id: -1 } });
+            expect(cron.getLastArchiveRound).toHaveBeenCalled();
+        });
+    });
 
 });
