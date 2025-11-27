@@ -336,7 +336,9 @@ export default class Bot extends Table.Crons.TableGameBot {
      * @param {string} botId - The bot ID
      */
     releaseSlot(rangeId, botId) {
-        if (!rangeId) return;
+        if (!rangeId){
+            return;
+        }
         const slots = this.targetRangeSlots.get(rangeId);
         if (slots) {
             slots.delete(botId);
@@ -378,9 +380,15 @@ export default class Bot extends Table.Crons.TableGameBot {
      * @returns {string} RangeStatus.BELOW, RangeStatus.WITHIN, or RangeStatus.ABOVE
      */
     isInTargetRange(multiplier, targetRange) {
-        if (!targetRange) return RangeStatus.BELOW;
-        if (multiplier < targetRange.min) return RangeStatus.BELOW;
-        if (multiplier >= targetRange.min && multiplier <= targetRange.max) return RangeStatus.WITHIN;
+        if (!targetRange){
+            return RangeStatus.BELOW;
+        }
+        if (multiplier < targetRange.min){
+            return RangeStatus.BELOW;
+        }
+        if (multiplier >= targetRange.min && multiplier <= targetRange.max){
+            return RangeStatus.WITHIN;
+        }
         return RangeStatus.ABOVE;
     }
 
