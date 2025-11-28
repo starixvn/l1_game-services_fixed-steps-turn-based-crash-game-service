@@ -9,12 +9,25 @@ export class PlaceBetConsumer extends Core.BaseEventConsumers.PlaceBetConsumer {
         const multiplierModeValidationCriteria = this.composeMultiplierModeValidationCriteria(payload);
         const betAmountValidationCriteria = this.composeBetAmountValidationCriteria(player, payload.amount);
         const clientSeedValidationCriteria = this.composeClientSeedValidationCriteria(payload.clientSeed);
+        const provablyFairValidationCriteria = this.composeProvablyFairValidationCriteria(player.profile.name);
 
         return bettingTimeValidationCriteria.concat(
             multiplierModeValidationCriteria,
             betAmountValidationCriteria,
-            clientSeedValidationCriteria
+            clientSeedValidationCriteria,
+            provablyFairValidationCriteria
         );
+    }
+
+    composeProvablyFairValidationCriteria(playerName) {
+        const provablyFair = this.gameData.provablyFair[playerName];
+
+        return [
+            {
+                failure: !provablyFair?.serverSeedHash || !provablyFair?.serverSeed,
+                notice: this.getNoticeObj(helpers.noticeHelper.invalidBet),
+            },
+        ];
     }
 
     composeBettingTimeValidationCriteria(player) {

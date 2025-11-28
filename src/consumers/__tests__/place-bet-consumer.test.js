@@ -47,6 +47,7 @@ describe("PlaceBetConsumer", () => {
         currencyGroupGames: [{ groupId: player.session.currencyGroupId, minBet: 4, maxBet: 18 }],
         players: {},
         ingame: {},
+        provablyFair: {},
         roundId: 1,
         remainingTime: 30,
     };
@@ -75,7 +76,8 @@ describe("PlaceBetConsumer", () => {
             jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
-            const expectedValue = [{ failure: false }, { failure: false }, { failure: false }, { failure: false }];
+            jest.spyOn(consumer, "composeProvablyFairValidationCriteria").mockReturnValue([{ failure: false }]);
+            const expectedValue = [{ failure: false }, { failure: false }, { failure: false }, { failure: false }, { failure: false }];
 
             // Act
             const actualValue = consumer.composeValidationCriteria(player, payload);
@@ -90,6 +92,7 @@ describe("PlaceBetConsumer", () => {
             jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeProvablyFairValidationCriteria").mockReturnValue([{ failure: false }]);
 
             // Act
             consumer.composeValidationCriteria(player, payload);
@@ -104,6 +107,7 @@ describe("PlaceBetConsumer", () => {
             jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeProvablyFairValidationCriteria").mockReturnValue([{ failure: false }]);
 
             // Act
             consumer.composeValidationCriteria(player, payload);
@@ -118,12 +122,28 @@ describe("PlaceBetConsumer", () => {
             jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
             jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeProvablyFairValidationCriteria").mockReturnValue([{ failure: false }]);
 
             // Act
             consumer.composeValidationCriteria(player, payload);
 
             // Assert
             expect(consumer.composeClientSeedValidationCriteria).toHaveBeenCalledWith(payload.clientSeed);
+        });
+
+        it("should call composeProvablyFairValidationCriteria with player name", () => {
+            // Arrange
+            jest.spyOn(consumer, "composeBettingTimeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeMultiplierModeValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeBetAmountValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeClientSeedValidationCriteria").mockReturnValue([{ failure: false }]);
+            jest.spyOn(consumer, "composeProvablyFairValidationCriteria").mockReturnValue([{ failure: false }]);
+
+            // Act
+            consumer.composeValidationCriteria(player, payload);
+
+            // Assert
+            expect(consumer.composeProvablyFairValidationCriteria).toHaveBeenCalledWith(player.profile.name);
         });
     });
 
@@ -431,6 +451,70 @@ describe("PlaceBetConsumer", () => {
                 const result = consumer.composeClientSeedValidationCriteria(seed);
                 expect(result[0].failure).toBe(false);
             });
+        });
+    });
+
+    describe("composeProvablyFairValidationCriteria", () => {
+        it("should return failure when provablyFair is undefined", () => {
+            // Arrange
+            consumer.gameData.provablyFair = {};
+
+            // Act
+            const result = consumer.composeProvablyFairValidationCriteria(player.profile.name);
+
+            // Assert
+            expect(result[0].failure).toBe(true);
+        });
+
+        it("should return failure when serverSeedHash is missing", () => {
+            // Arrange
+            consumer.gameData.provablyFair[player.profile.name] = {
+                serverSeed: "some-seed",
+            };
+
+            // Act
+            const result = consumer.composeProvablyFairValidationCriteria(player.profile.name);
+
+            // Assert
+            expect(result[0].failure).toBe(true);
+        });
+
+        it("should return failure when serverSeed is missing", () => {
+            // Arrange
+            consumer.gameData.provablyFair[player.profile.name] = {
+                serverSeedHash: "some-hash",
+            };
+
+            // Act
+            const result = consumer.composeProvablyFairValidationCriteria(player.profile.name);
+
+            // Assert
+            expect(result[0].failure).toBe(true);
+        });
+
+        it("should return correct error code when validation fails", () => {
+            // Arrange
+            consumer.gameData.provablyFair = {};
+
+            // Act
+            const result = consumer.composeProvablyFairValidationCriteria(player.profile.name);
+
+            // Assert
+            expect(result[0].notice.errorCode).toBe(helpers.noticeHelper.invalidBet);
+        });
+
+        it("should return no failure when both serverSeedHash and serverSeed exist", () => {
+            // Arrange
+            consumer.gameData.provablyFair[player.profile.name] = {
+                serverSeedHash: "some-hash",
+                serverSeed: "some-seed",
+            };
+
+            // Act
+            const result = consumer.composeProvablyFairValidationCriteria(player.profile.name);
+
+            // Assert
+            expect(result[0].failure).toBe(false);
         });
     });
 

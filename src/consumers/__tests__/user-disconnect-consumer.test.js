@@ -21,6 +21,9 @@ describe("UserDisconnectConsumer", () => {
         // Arrange - Common setup
         gameData = {
             realPlayers: {},
+            provablyFair: {},
+            ingame: {},
+            players: {},
         };
         publisher = {
             publishToAllUsersExceptSystem: jest.fn(),
@@ -64,7 +67,7 @@ describe("UserDisconnectConsumer", () => {
         });
 
         describe("when player is found", () => {
-            const mockPlayer = { id: "test-socket-id", profile: { name: "test-player" } };
+            const mockPlayer = { id: "test-socket-id", UID: "test-uid", profile: { name: "test-player" } };
 
             beforeEach(() => {
                 consumer.gameData = {
@@ -85,6 +88,7 @@ describe("UserDisconnectConsumer", () => {
                     players: {
                         [mockPlayer.UID]: {
                             profile: mockPlayer.profile,
+                            isConnected: true, // Initial state before disconnect
                         },
                     },
                 };
@@ -168,6 +172,41 @@ describe("UserDisconnectConsumer", () => {
                     }
 
                     // Assert
+                    expect(Core.BaseEventConsumers.UserDisconnectConsumer.prototype.consume).not.toHaveBeenCalled();
+                });
+            });
+
+            describe("with player already disconnected", () => {
+                beforeEach(() => {
+                    consumer.gameData.players[mockPlayer.UID].isConnected = false;
+                });
+
+                it("should call super.consume when player is already disconnected", async () => {
+                    // Act
+                    await consumer.consume(socketClient);
+
+                    // Assert
+                    expect(Core.BaseEventConsumers.UserDisconnectConsumer.prototype.consume).toHaveBeenCalledWith(socketClient);
+                });
+            });
+
+            describe("with player already connected", () => {
+                beforeEach(() => {
+                    consumer.gameData.players[mockPlayer.UID].isConnected = true;
+                    settleCashOutConsumer.validateCashOut.mockReturnValue(true);
+                    settleCashOutConsumer.proceedCashOut.mockImplementation(() => {
+                        // After proceedCashOut succeeds, set isConnected back to true
+                        consumer.gameData.players[mockPlayer.UID].isConnected = true;
+                    });
+                });
+
+                it("should not call super.consume when player is already connected", async () => {
+                    // Act
+                    await consumer.consume(socketClient);
+
+                    // Assert
+                    expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalled();
+                    expect(consumer.gameData.players[mockPlayer.UID].isConnected).toBe(true);
                     expect(Core.BaseEventConsumers.UserDisconnectConsumer.prototype.consume).not.toHaveBeenCalled();
                 });
             });

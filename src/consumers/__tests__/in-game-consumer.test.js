@@ -225,5 +225,13 @@ describe("in game consumer instance", () => {
             // assert
             expect(realPlayer.socketClient.emit).toHaveBeenCalledWith(definition.name, payload);
         });
+
+        it("should set player isConnected to true", async () => {
+            // act
+            await consumer.consume(realPlayer);
+
+            // assert
+            expect(gameData.players[realPlayer.UID].isConnected).toBe(true);
+        });
     });
 });
