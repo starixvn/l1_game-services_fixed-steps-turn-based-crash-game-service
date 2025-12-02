@@ -29,7 +29,6 @@ export class InGameConsumer extends EventConsumers.TableInGameConsumer {
             this.gameData.players[realPlayer.UID] = player;
         }
 
-        this.gameData.players[realPlayer.UID].isConnected = true;
         realPlayer.socketClient.emit(this.definition.name, payload);
         this.provablyFairConsumer.generateServerSeedAndPublishHash(realPlayer.UID, realPlayer.profile.name);
         this.publisher.publishToAllUsersExceptSystem(Systems.Mobi, realPlayer.UID, { player });
