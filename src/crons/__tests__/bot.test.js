@@ -894,15 +894,15 @@ describe("GameBots", () => {
             // Arrange
             const bot = initBot();
             bot.clearTimeouts = jest.fn();
-            bot.activeBots.set("bot1", { rangeId: "range1" });
-            bot.reserveSlot("range1", "bot1");
+            bot.activeBots.set("bot1", { rangeId: 1 });
+            bot.reserveSlot(1, "bot1");
             const botToReset = { id: "bot1" };
 
             // Act
             bot.resetBot(botToReset);
 
             // Assert
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(false);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(false);
             expect(bot.activeBots.has("bot1")).toBe(false);
         });
     });
@@ -926,14 +926,14 @@ describe("GameBots", () => {
             // Arrange
             const bot = initBot();
             bot.clearTimeouts = jest.fn();
-            bot.activeBots.set("bot1", { rangeId: "range1" });
-            bot.reserveSlot("range1", "bot1");
+            bot.activeBots.set("bot1", { rangeId: 1 });
+            bot.reserveSlot(1, "bot1");
 
             // Act
             await bot.removeBot("bot1");
 
             // Assert
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(false);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(false);
             expect(bot.activeBots.has("bot1")).toBe(false);
         });
     });
@@ -1058,16 +1058,16 @@ describe("GameBots", () => {
 
                 // Assert
                 expect(result).toHaveLength(5);
-                // Range 1: 45% of 20 = 9 slots
-                expect(result[0].totalSlots).toBe(9);
-                expect(result[0].ratio).toBe(0.45);
-                // Range 2: 15% of 20 = 3 slots
-                expect(result[1].totalSlots).toBe(3);
-                expect(result[1].ratio).toBe(0.15);
+                // Range 1: 55% of 20 = 11 slots
+                expect(result[0].totalSlots).toBe(11);
+                expect(result[0].ratio).toBe(0.55);
+                // Range 2: 20% of 20 = 4 slots
+                expect(result[1].totalSlots).toBe(4);
+                expect(result[1].ratio).toBe(0.20);
                 // Range 3: 15% of 20 = 3 slots
                 expect(result[2].totalSlots).toBe(3);
-                // Range 4: 15% of 20 = 3 slots
-                expect(result[3].totalSlots).toBe(3);
+                // Range 4: 5% of 20 = 1 slot
+                expect(result[3].totalSlots).toBe(1);
                 // Range 5: 5% of 20 = 1 slot
                 expect(result[4].totalSlots).toBe(1);
                 expect(result[4].ratio).toBe(0.05);
@@ -1077,15 +1077,15 @@ describe("GameBots", () => {
                 // Arrange
                 const bot = initBot();
                 bot.botsInRoom = { bot1: {}, bot2: {}, bot3: {}, bot4: {} }; // 4 bots
-                bot.reserveSlot("range1", "bot1");
-                bot.reserveSlot("range1", "bot2");
+                bot.reserveSlot(1, "bot1");
+                bot.reserveSlot(1, "bot2");
 
                 // Act
                 const result = bot.getTargetRangeSlots(1);
 
                 // Assert
-                const range1 = result.find((r) => r.id === "range1");
-                expect(range1.totalSlots).toBe(2); // 45% of 4 = 1.8, rounded to 2
+                const range1 = result.find((r) => r.id === 1);
+                expect(range1.totalSlots).toBe(2); // 55% of 4 = 2.2, rounded to 2
                 expect(range1.occupiedSlots).toBe(2);
                 expect(range1.availableSlots).toBe(0);
             });
@@ -1095,7 +1095,7 @@ describe("GameBots", () => {
             it("should reserve a slot for a bot in the specified range", () => {
                 // Arrange
                 const bot = initBot();
-                const rangeId = "range1";
+                const rangeId = 1;
                 const botId = "bot1";
 
                 // Act
@@ -1125,7 +1125,7 @@ describe("GameBots", () => {
             it("should release a slot for a bot", () => {
                 // Arrange
                 const bot = initBot();
-                const rangeId = "range1";
+                const rangeId = 1;
                 const botId = "bot1";
                 bot.reserveSlot(rangeId, botId);
 
@@ -1153,43 +1153,41 @@ describe("GameBots", () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: {}, bot2: {}, bot3: {}, bot4: {} }; // 4 bots
-            bot.getMaxMultiplier = jest.fn().mockReturnValue(10.0);
             bot.chance.weighted = jest.fn().mockReturnValue({
-                id: "range1",
+                id: 1,
                 min: 1.01,
                 max: 2.0,
-                ratio: 0.45,
+                ratio: 0.55,
                 totalSlots: 2,
                 occupiedSlots: 0,
                 availableSlots: 2,
             });
 
             // Act
-            const result = bot.assignTargetRange("bot1");
+            const result = bot.assignTargetRange("bot1", 1);
 
             // Assert
             expect(result).toHaveProperty("rangeId");
             expect(result).toHaveProperty("min");
             expect(result).toHaveProperty("max");
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(true);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(true);
         });
 
         it("should use fallback to first range when no slots available", () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: {} };
-            bot.getMaxMultiplier = jest.fn().mockReturnValue(10.0);
             // Mock getTargetRangeSlots to return no available ranges
             bot.getTargetRangeSlots = jest.fn().mockReturnValue([]);
 
             // Act
-            const result = bot.assignTargetRange("bot1");
+            const result = bot.assignTargetRange("bot1", 1);
 
             // Assert
-            expect(result.rangeId).toBe("range1");
+            expect(result.rangeId).toBe(1);
             expect(result.min).toBe(1.01);
             expect(result.max).toBe(2.0);
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(true);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(true);
         });
 
         it("should use getMaxMultiplier for dynamic max range", () => {
@@ -1197,7 +1195,7 @@ describe("GameBots", () => {
             const bot = initBot();
             bot.botsInRoom = { bot1: {} };
             bot.chance.weighted = jest.fn().mockReturnValue({
-                id: "range5",
+                id: 5,
                 min: 7.1,
                 max: 10.0, // Dynamic max resolved to mode 1 max
                 ratio: 0.05,
@@ -1407,10 +1405,10 @@ describe("GameBots", () => {
             bot.recentBetConsumer.add = jest.fn().mockResolvedValue({});
             bot.getMaxMultiplier = jest.fn().mockReturnValue(10.0);
             bot.chance.weighted = jest.fn().mockReturnValue({
-                id: "range1",
+                id: 1,
                 min: 1.01,
                 max: 2.0,
-                ratio: 0.45,
+                ratio: 0.55,
                 totalSlots: 1,
                 occupiedSlots: 0,
                 availableSlots: 1,
@@ -1427,7 +1425,7 @@ describe("GameBots", () => {
             expect(botState).toHaveProperty("rangeId");
             expect(botState.targetRange).toHaveProperty("min");
             expect(botState.targetRange).toHaveProperty("max");
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(true);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(true);
         });
     });
 
@@ -1439,19 +1437,19 @@ describe("GameBots", () => {
                 amount: 100,
                 multiplier: 1.5,
                 roundId: 1,
-                rangeId: "range1",
+                rangeId: 1,
             });
             bot.botRate = 1.0;
             bot.recentBetConsumer.update = jest.fn().mockResolvedValue({});
             const mockUser = { id: "bot1", red: 1000, name: "Bot1" };
             userInfosRepository.findOneAndUpdate.mockResolvedValue(mockUser);
-            bot.reserveSlot("range1", "bot1");
+            bot.reserveSlot(1, "bot1");
 
             // Act
             await bot.handleCashout("bot1");
 
             // Assert
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(false);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(false);
             expect(bot.activeBots.has("bot1")).toBe(false);
         });
 
@@ -1462,17 +1460,17 @@ describe("GameBots", () => {
                 amount: 100,
                 multiplier: 1.5,
                 roundId: 1,
-                rangeId: "range1",
+                rangeId: 1,
             });
             bot.botRate = 1.0;
             bot.recentBetConsumer.update = jest.fn().mockRejectedValue(new Error("Update failed"));
             userInfosRepository.findOneAndUpdate.mockRejectedValue(new Error("DB error"));
-            bot.reserveSlot("range1", "bot1");
+            bot.reserveSlot(1, "bot1");
 
             // Act & Assert - should throw error but slot should still be released
             await expect(bot.handleCashout("bot1")).rejects.toThrow("DB error");
             // Slot should be released even though error was thrown
-            expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(false);
+            expect(bot.targetRangeSlots.get(1).has("bot1")).toBe(false);
             expect(bot.activeBots.has("bot1")).toBe(false);
         });
 

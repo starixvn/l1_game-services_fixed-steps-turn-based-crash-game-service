@@ -16,11 +16,11 @@ const RangeStatus = {
 
 // Target range configuration
 const TARGET_RANGES = [
-    { id: "range1", min: 1.01, max: 2.0, ratio: 0.45 },
-    { id: "range2", min: 2.1, max: 4.0, ratio: 0.15 },
-    { id: "range3", min: 4.1, max: 5.0, ratio: 0.15 },
-    { id: "range4", min: 5.1, max: 7.0, ratio: 0.15 },
-    { id: "range5", min: 7.1, max: "dynamic", ratio: 0.05 }, // Dynamic max based on game config
+    { id: 1, min: 1.01, max: 2.0, ratio: 0.55 },
+    { id: 2, min: 2.1, max: 4.0, ratio: 0.20 },
+    { id: 3, min: 4.1, max: 5.0, ratio: 0.15 },
+    { id: 4, min: 5.1, max: 7.0, ratio: 0.05 },
+    { id: 5, min: 7.1, max: "dynamic", ratio: 0.05 }, // Dynamic max based on game config
 ];
 
 export default class Bot extends Table.Crons.TableGameBot {
