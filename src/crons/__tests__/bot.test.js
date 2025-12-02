@@ -1021,7 +1021,7 @@ describe("GameBots", () => {
                 bot.botsInRoom = {};
 
                 // Act
-                const result = bot.getTargetRangeSlots();
+                const result = bot.getTargetRangeSlots(1);
 
                 // Assert
                 expect(result).toEqual([]);
@@ -1054,7 +1054,7 @@ describe("GameBots", () => {
                 }; // 20 bots
 
                 // Act
-                const result = bot.getTargetRangeSlots();
+                const result = bot.getTargetRangeSlots(1);
 
                 // Assert
                 expect(result).toHaveLength(5);
@@ -1081,7 +1081,7 @@ describe("GameBots", () => {
                 bot.reserveSlot("range1", "bot2");
 
                 // Act
-                const result = bot.getTargetRangeSlots();
+                const result = bot.getTargetRangeSlots(1);
 
                 // Assert
                 const range1 = result.find((r) => r.id === "range1");
@@ -1192,15 +1192,14 @@ describe("GameBots", () => {
             expect(bot.targetRangeSlots.get("range1").has("bot1")).toBe(true);
         });
 
-        it("should use getMaxMultiplier for Infinity max range", () => {
+        it("should use getMaxMultiplier for dynamic max range", () => {
             // Arrange
             const bot = initBot();
             bot.botsInRoom = { bot1: {} };
-            bot.getMaxMultiplier = jest.fn().mockReturnValue(1000.0);
             bot.chance.weighted = jest.fn().mockReturnValue({
                 id: "range5",
                 min: 7.1,
-                max: Infinity,
+                max: 10.0, // Dynamic max resolved to mode 1 max
                 ratio: 0.05,
                 totalSlots: 1,
                 occupiedSlots: 0,
@@ -1208,11 +1207,10 @@ describe("GameBots", () => {
             });
 
             // Act
-            const result = bot.assignTargetRange("bot1");
+            const result = bot.assignTargetRange("bot1", 1); // Pass multiplierMode
 
             // Assert
-            expect(result.max).toBe(1000.0);
-            expect(bot.getMaxMultiplier).toHaveBeenCalled();
+            expect(result.max).toBe(10.0);
         });
     });
 
@@ -1296,14 +1294,14 @@ describe("GameBots", () => {
     });
 
     describe("getMaxMultiplier method", () => {
-        it("should return maximum multiplier from all modes", () => {
+        it("should return maximum multiplier for specific mode", () => {
             // Arrange
             const bot = initBot();
             // fixedStepsMultiplierConfigs already set up in beforeEach
-            // Mode 1 max: 2.0, Mode 2 max: 5.0, Mode 3 max: 8.0, Mode 4 max: 10.0
+            // Mode 4 max: 10.0
 
             // Act
-            const result = bot.getMaxMultiplier();
+            const result = bot.getMaxMultiplier(4);
 
             // Assert
             expect(result).toBe(10.0);

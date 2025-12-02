@@ -20,7 +20,7 @@ const TARGET_RANGES = [
     { id: "range2", min: 2.1, max: 4.0, ratio: 0.15 },
     { id: "range3", min: 4.1, max: 5.0, ratio: 0.15 },
     { id: "range4", min: 5.1, max: 7.0, ratio: 0.15 },
-    { id: "range5", min: 7.1, max: Infinity, ratio: 0.05 },
+    { id: "range5", min: 7.1, max: "dynamic", ratio: 0.05 }, // Dynamic max based on game config
 ];
 
 export default class Bot extends Table.Crons.TableGameBot {
@@ -41,6 +41,14 @@ export default class Bot extends Table.Crons.TableGameBot {
         TARGET_RANGES.forEach((range) => {
             this.targetRangeSlots.set(range.id, new Set());
         });
+
+        // Performance optimization caches
+        this.targetRangeSlotsCache = null;
+        this.targetRangeSlotsCacheKey = null;
+        this.randomNumberPool = []; // Pool of pre-generated random numbers
+        this.randomPoolSize = 1000;
+        this.randomPoolIndex = 0;
+        this.preGenerateRandomNumbers();
     }
 
     async run() {
@@ -50,7 +58,7 @@ export default class Bot extends Table.Crons.TableGameBot {
 
         this.clearTimeouts();
 
-        const random = this.chance.integer({ min: 0, max: 5 });
+        const random = Math.floor(this.getPooledRandom(0, 5));
 
         if (this.shouldAddBot(random)) {
             await this.joinRoom();
@@ -62,7 +70,7 @@ export default class Bot extends Table.Crons.TableGameBot {
 
         const botIds = Object.keys(this.botsInRoom);
         botIds.forEach((botId) => {
-            const delay = this.chance.integer({ min: 0, max: 800 });
+            const delay = Math.floor(this.getPooledRandom(0, 800));
             const timeout = setTimeout(() => {
                 this.handleBotActions(botId).catch((error) => {
                     logger.logError(`Error handling bot action for ${botId}: ${util.inspect(error)}`);
@@ -106,7 +114,7 @@ export default class Bot extends Table.Crons.TableGameBot {
             user.profile = { name: user.name };
 
             // Assign target range and reserve slot
-            const targetRange = this.assignTargetRange(botId);
+            const targetRange = this.assignTargetRange(botId, multiplierMode);
 
             this.activeBots.set(botId, {
                 amount: betAmount,
@@ -296,26 +304,67 @@ export default class Bot extends Table.Crons.TableGameBot {
 
     /**
      * Calculate available slots for each range based on bots in room
+     * @param {number} multiplierMode - The multiplier mode for calculating range5 max
      * @returns {Array} Array of ranges with available slots
      */
-    getTargetRangeSlots() {
+    getTargetRangeSlots(multiplierMode) {
         const totalBots = Object.keys(this.botsInRoom).length;
+        const cacheKey = this.generateCacheKey(totalBots);
+
+        // Return cached result if valid
+        if (this.targetRangeSlotsCache && this.targetRangeSlotsCacheKey === cacheKey) {
+            return this.targetRangeSlotsCache;
+        }
+
         if (totalBots === 0) {
+            this.targetRangeSlotsCache = [];
+            this.targetRangeSlotsCacheKey = cacheKey;
             return [];
         }
 
-        return TARGET_RANGES.map((range) => {
+        const result = TARGET_RANGES.map((range) => {
             const totalSlots = Math.max(1, Math.round(totalBots * range.ratio));
             const occupiedSlots = this.targetRangeSlots.get(range.id).size;
             const availableSlots = totalSlots - occupiedSlots;
 
+            // Handle dynamic max for range5
+            const max = range.max === "dynamic" ? this.getMaxMultiplier(multiplierMode) : range.max;
+
             return {
                 ...range,
+                max,
                 totalSlots,
                 occupiedSlots,
                 availableSlots,
             };
         });
+
+        // Cache the result
+        this.targetRangeSlotsCache = result;
+        this.targetRangeSlotsCacheKey = cacheKey;
+
+        return result;
+    }
+
+    /**
+     * Generate cache key for slot calculations
+     * @param {number} totalBots - Total number of bots in room
+     * @returns {string} Cache key
+     */
+    generateCacheKey(totalBots) {
+        // Include occupied slots in cache key to detect changes
+        const occupiedCounts = TARGET_RANGES.map(range =>
+            this.targetRangeSlots.get(range.id).size
+        ).join(',');
+        return `${totalBots}:${occupiedCounts}`;
+    }
+
+    /**
+     * Invalidate the target range slots cache
+     */
+    invalidateSlotCache() {
+        this.targetRangeSlotsCache = null;
+        this.targetRangeSlotsCacheKey = null;
     }
 
     /**
@@ -325,8 +374,9 @@ export default class Bot extends Table.Crons.TableGameBot {
      */
     reserveSlot(rangeId, botId) {
         const slots = this.targetRangeSlots.get(rangeId);
-        if (slots) {
+        if (slots && !slots.has(botId)) {
             slots.add(botId);
+            this.invalidateSlotCache();
         }
     }
 
@@ -340,24 +390,43 @@ export default class Bot extends Table.Crons.TableGameBot {
             return;
         }
         const slots = this.targetRangeSlots.get(rangeId);
-        if (slots) {
+        if (slots && slots.has(botId)) {
             slots.delete(botId);
+            this.invalidateSlotCache();
         }
+    }
+
+    /**
+     * Override joinRoom to invalidate cache when bots join
+     */
+    async joinRoom() {
+        await super.joinRoom();
+        this.invalidateSlotCache();
+    }
+
+    /**
+     * Override leaveRoom to invalidate cache when bots leave
+     */
+    async leaveRoom() {
+        await super.leaveRoom();
+        this.invalidateSlotCache();
     }
 
     /**
      * Assign a target range to a bot and reserve a slot
      * @param {string} botId - The bot ID
+     * @param {number} multiplierMode - The bot's multiplier mode for calculating range5 max (required)
      * @returns {Object|null} The assigned target range or null if no range available
      */
-    assignTargetRange(botId) {
-        const availableRanges = this.getTargetRangeSlots().filter((range) => range.availableSlots > 0);
+    assignTargetRange(botId, multiplierMode) {
+        const availableRanges = this.getTargetRangeSlots(multiplierMode).filter((range) => range.availableSlots > 0);
 
         if (availableRanges.length === 0) {
             // Fallback: if no slots available, assign to first range
             const firstRange = TARGET_RANGES[0];
             this.reserveSlot(firstRange.id, botId);
-            return { rangeId: firstRange.id, min: firstRange.min, max: firstRange.max };
+            const max = firstRange.max === "dynamic" ? this.getMaxMultiplier(multiplierMode) : firstRange.max;
+            return { rangeId: firstRange.id, min: firstRange.min, max };
         }
 
         // Weight selection by available slots (more available = higher chance)
@@ -369,7 +438,7 @@ export default class Bot extends Table.Crons.TableGameBot {
         return {
             rangeId: selectedRange.id,
             min: selectedRange.min,
-            max: selectedRange.max === Infinity ? this.getMaxMultiplier() : selectedRange.max,
+            max: selectedRange.max,
         };
     }
 
@@ -393,21 +462,46 @@ export default class Bot extends Table.Crons.TableGameBot {
     }
 
     /**
-     * Get maximum possible multiplier from game config
-     * @returns {number} Maximum multiplier
+     * Get maximum possible multiplier from game config for a specific mode
+     * @param {number} multiplierMode - The multiplier mode to get max for
+     * @returns {number} Maximum multiplier for the specified mode
      */
-    getMaxMultiplier() {
+    getMaxMultiplier(multiplierMode) {
         const fixedStepsMultiplierConfigs = this.gameData.gameConfigs.crashConfig.fixedStepsMultiplierConfigs;
 
-        // Get the maximum multiplier from all modes
-        let maxMultiplier = 0;
-        fixedStepsMultiplierConfigs.forEach((config) => {
-            if (config.multiplierSteps && config.multiplierSteps.length > 0) {
-                const modeMax = Math.max(...config.multiplierSteps);
-                maxMultiplier = Math.max(maxMultiplier, modeMax);
-            }
-        });
+        // Get config for specific mode (mode is guaranteed to exist)
+        const config = fixedStepsMultiplierConfigs.find((config) => config.mode === multiplierMode);
 
-        return maxMultiplier;
+        // Return the last multiplier in the steps array (which is the maximum)
+        return config.multiplierSteps.at(-1);
+    }
+
+    /**
+     * Pre-generate a pool of random numbers for performance
+     */
+    preGenerateRandomNumbers() {
+        this.randomNumberPool = [];
+        for (let i = 0; i < this.randomPoolSize; i++) {
+            this.randomNumberPool.push(this.chance.integer({ min: 0, max: 5 }));
+        }
+        this.randomPoolIndex = 0;
+    }
+
+
+    /**
+     * Get next random number from the pre-generated pool
+     * @param {number} min - Minimum value
+     * @param {number} max - Maximum value
+     * @returns {number} Random number
+     */
+    getPooledRandom(min = 0, max = 5) {
+        if (this.randomPoolIndex >= this.randomNumberPool.length) {
+            this.preGenerateRandomNumbers();
+        }
+        const randomValue = this.randomNumberPool[this.randomPoolIndex];
+        this.randomPoolIndex++;
+
+        // Scale the value to the requested range
+        return min + (randomValue * (max - min)) / 5;
     }
 }
