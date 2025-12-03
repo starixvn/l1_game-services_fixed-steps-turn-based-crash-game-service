@@ -77,7 +77,6 @@ export default class RecentBetConsumer {
         const recentBets = await this.recentBetsRepository
             .find({}, { _id: false, uid: false, currency: false, operatorId: false, __v: false })
             .lean()
-            .sort({ time: -1 })
             .limit(MAX_RECENT_BETS_RECORDS);
 
         if (recentBets.length === 0) {

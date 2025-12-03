@@ -214,9 +214,7 @@ describe("RecentBetConsumer", () => {
         beforeEach(() => {
             mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
-                    sort: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue(mockRecentBets),
-                    }),
+                    limit: jest.fn().mockResolvedValue(mockRecentBets),
                 }),
             });
         });
@@ -232,21 +230,12 @@ describe("RecentBetConsumer", () => {
             );
         });
 
-        it("should sort by time descending", async () => {
-            // Act
-            await consumer.getRecentBets();
-
-            // Assert
-            const queryChain = mockRecentBetsRepository.find().lean();
-            expect(queryChain.sort).toHaveBeenCalledWith({ time: -1 });
-        });
-
         it("should limit to MAX_RECENT_BETS_RECORDS (10)", async () => {
             // Act
             await consumer.getRecentBets();
 
             // Assert
-            const queryChain = mockRecentBetsRepository.find().lean().sort();
+            const queryChain = mockRecentBetsRepository.find().lean();
             expect(queryChain.limit).toHaveBeenCalledWith(10);
         });
 
@@ -254,9 +243,7 @@ describe("RecentBetConsumer", () => {
             // Arrange
             mockRecentBetsRepository.find.mockReturnValue({
                 lean: jest.fn().mockReturnValue({
-                    sort: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue([]),
-                    }),
+                    limit: jest.fn().mockResolvedValue([]),
                 }),
             });
 
