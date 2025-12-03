@@ -348,7 +348,6 @@ describe("SettleCashOutConsumer", () => {
                     time: mockTime,
                     player: realPlayer,
                     playerName: realPlayer.profile.name,
-                    isUserDisconnect: false,
                 });
             });
 
@@ -389,27 +388,6 @@ describe("SettleCashOutConsumer", () => {
                         time: mockTime,
                         player: realPlayer,
                         playerName: realPlayer.profile.name,
-                        isUserDisconnect: false,
-                    });
-                });
-            });
-
-            describe("with isUserDisconnect", () => {
-                it("should call settleRound with isUserDisconnect flag", async () => {
-                    // Arrange
-                    const mockTime = new Date();
-                    jest.spyOn(global, "Date").mockImplementation(() => mockTime);
-
-                    // Act
-                    await consumer.proceedCashOut({ player: realPlayer, isUserDisconnect: true });
-
-                    // Assert
-                    expect(consumer.settleGameRoundConsumer.settleRound).toHaveBeenCalledWith({
-                        roundId: betDetails.roundId,
-                        time: mockTime,
-                        player: realPlayer,
-                        playerName: realPlayer.profile.name,
-                        isUserDisconnect: true,
                     });
                 });
             });

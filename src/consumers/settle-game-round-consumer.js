@@ -44,7 +44,7 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
         return this.betLogsRepository.find({ roundId }).lean().exec();
     }
 
-    async settleRound({ roundId, time, player, playerName, isUserDisconnect = false }) {
+    async settleRound({ roundId, time, player, playerName }) {
         try {
             const round = await this.queryRound(roundId);
             const result = await this.resultsRepository.findOne({ roundId }).lean().exec();
@@ -73,13 +73,11 @@ export class SettleGameRoundConsumer extends EventConsumers.TableSettleGameRound
             await round.save();
 
             if (player) {
-                if (!isUserDisconnect) {
-                    await this.userBetResultPublisher.publish(player.UID, {
-                        ...betResult,
-                        rate: cashOutLog.rate,
-                        reachMaxWin: round.reachMaxWin,
-                    });
-                }
+                await this.userBetResultPublisher.publish(player.UID, {
+                    ...betResult,
+                    rate: cashOutLog.rate,
+                    reachMaxWin: round.reachMaxWin,
+                });
                 this.updatePlayerBetTracks(round.name);
                 this.gameData.ingame[playerName].betTracks = {};
 

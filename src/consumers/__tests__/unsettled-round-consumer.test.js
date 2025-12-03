@@ -129,7 +129,6 @@ describe("unsettledRoundConsumer", () => {
                         },
                     },
                     isAutoCashOut: true,
-                    isUserDisconnect: true,
                 });
                 expect(gameData.ingame.player1).toEqual({
                     activeBet: {
@@ -431,7 +430,6 @@ describe("unsettledRoundConsumer", () => {
                             },
                         }),
                         isAutoCashOut: true,
-                        isUserDisconnect: true,
                     })
                 );
                 expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith(
@@ -450,7 +448,6 @@ describe("unsettledRoundConsumer", () => {
                             },
                         }),
                         isAutoCashOut: true,
-                        isUserDisconnect: true,
                     })
                 );
             });

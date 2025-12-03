@@ -33,7 +33,7 @@ export class SettleCashOutConsumer {
         return betTracks?.[Actions.Bet];
     }
 
-    async proceedCashOut({ player, isAutoCashOut = false, isUserDisconnect = false }) {
+    async proceedCashOut({ player, isAutoCashOut = false }) {
         const isValidCashOut = this.validateCashOut(player) || isAutoCashOut;
         const bet = this.getCashOutBet(player);
 
@@ -53,19 +53,16 @@ export class SettleCashOutConsumer {
             time: new Date(),
             player,
             playerName: player.profile.name,
-            isUserDisconnect,
         });
 
         const rate = this.calculateCurrencyRate(player.session);
-        if (!isUserDisconnect) {
-            const baseWinningAmount = winningAmount * rate;
-            await this.recentBetConsumer.update({
-                roundId,
-                winningAmount,
-                baseWinningAmount,
-                multiplier,
-            });
-        }
+        const baseWinningAmount = winningAmount * rate;
+        await this.recentBetConsumer.update({
+            roundId,
+            winningAmount,
+            baseWinningAmount,
+            multiplier,
+        });
     }
 
     isValidCashOutBet(bet) {

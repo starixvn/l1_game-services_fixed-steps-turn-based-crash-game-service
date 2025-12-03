@@ -66,7 +66,7 @@ export class UnsettledRoundConsumer {
                     },
                 };
 
-                await this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true, isUserDisconnect: true });
+                await this.settleCashOutConsumer.proceedCashOut({ player, isAutoCashOut: true });
             })
         );
     }

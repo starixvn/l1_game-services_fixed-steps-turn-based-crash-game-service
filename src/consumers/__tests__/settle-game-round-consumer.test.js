@@ -421,13 +421,6 @@ describe("SettleGameRoundConsumer", () => {
                     });
                 });
 
-                it("should not publish bet result to user when isUserDisconnect is true", async () => {
-                    // Act
-                    await consumer.settleRound({ roundId, time, player, playerName: player.profile.name, isUserDisconnect: true });
-
-                    // Assert
-                    expect(consumer.userBetResultPublisher.publish).not.toHaveBeenCalled();
-                });
 
                 it("should updatePlayerBetTracks", async () => {
                     // Arrange

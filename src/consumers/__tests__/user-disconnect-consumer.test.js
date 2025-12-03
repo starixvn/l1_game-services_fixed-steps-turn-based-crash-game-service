@@ -133,7 +133,6 @@ describe("UserDisconnectConsumer", () => {
                     expect(settleCashOutConsumer.proceedCashOut).toHaveBeenCalledWith({
                         player: mockPlayer,
                         isAutoCashOut: true,
-                        isUserDisconnect: true,
                     });
                 });
 
