@@ -373,11 +373,19 @@ describe("ProcessBetQueue", () => {
             proceedBetQueue.notifyPlacingBetResult = jest.fn();
             proceedBetQueue.updateUserStakeLevel = jest.fn();
             proceedBetQueue.getMaxWinPerRound = jest.fn().mockReturnValue(1000);
-            recentBetConsumer.add = jest.fn().mockResolvedValue({
+            const mockRecentBet = {
+                roundId,
                 name: player.profile.name,
                 amount: payload.amount,
                 baseAmount: payload.amount * rate,
                 rate,
+                time: new Date(),
+                exchangeRateId: gameData.exchangeRates.exId,
+                playerId: player.session.playerId,
+            };
+            recentBetConsumer.add = jest.fn().mockImplementation(async () => {
+                recentBetPublisher.publish(mockRecentBet);
+                return mockRecentBet;
             });
             recentBetPublisher.publish = jest.fn();
             gameData.provablyFair = {
@@ -466,6 +474,47 @@ describe("ProcessBetQueue", () => {
                 amount: payload.amount,
                 rate,
             });
+        });
+
+        it("should call recentBetConsumer.add when action is Bet", async () => {
+            // Act
+            await proceedBetQueue.handleSuccessBet(player, balance, roundId, { ...payload, action: Actions.Bet });
+
+            // Assert
+            expect(recentBetConsumer.add).toHaveBeenCalledWith(player, {
+                roundId,
+                amount: payload.amount,
+                baseAmount: payload.amount * rate,
+                rate,
+            });
+        });
+
+        it("should publish recent bet when action is Bet", async () => {
+            // Arrange
+            const mockRecentBet = {
+                roundId,
+                name: player.profile.name,
+                amount: payload.amount,
+                baseAmount: payload.amount * rate,
+                rate,
+                time: new Date(),
+                exchangeRateId: gameData.exchangeRates.exId,
+                playerId: player.session.playerId,
+            };
+
+            // Act
+            await proceedBetQueue.handleSuccessBet(player, balance, roundId, { ...payload, action: Actions.Bet });
+
+            // Assert
+            expect(recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
+        });
+
+        it("should not call recentBetConsumer.add when action is not Bet", async () => {
+            // Act
+            await proceedBetQueue.handleSuccessBet(player, balance, roundId, { ...payload, action: Actions.Mine });
+
+            // Assert
+            expect(recentBetConsumer.add).not.toHaveBeenCalled();
         });
 
         it("should not call updateUserStakeLevel when bet is free bet", async () => {

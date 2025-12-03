@@ -136,13 +136,12 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
 
         if (bet.action === Actions.Bet) {
             const baseAmount = bet.amount * rate;
-            const recentBet = await this.recentBetConsumer.add(player, {
+            await this.recentBetConsumer.add(player, {
                 roundId,
                 amount: bet.amount,
                 baseAmount,
                 rate,
             });
-            this.recentBetPublisher.publish(recentBet);
         }
 
         this.gameData.addPlayerToBetList(player.UID, {
