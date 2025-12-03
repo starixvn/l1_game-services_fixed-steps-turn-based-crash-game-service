@@ -160,7 +160,6 @@ describe("ProcessBetQueue", () => {
                 roundsRepository,
                 mineConsumer,
                 recentBetConsumer,
-                recentBetPublisher,
             });
 
             // Assert
@@ -170,7 +169,6 @@ describe("ProcessBetQueue", () => {
             expect(processBetQueue.roundsRepository).toBe(roundsRepository);
             expect(processBetQueue.mineConsumer).toBe(mineConsumer);
             expect(processBetQueue.recentBetConsumer).toBe(recentBetConsumer);
-            expect(processBetQueue.recentBetPublisher).toBe(recentBetPublisher);
         });
     });
 
@@ -490,23 +488,22 @@ describe("ProcessBetQueue", () => {
         });
 
         it("should publish recent bet when action is Bet", async () => {
-            // Arrange
-            const mockRecentBet = {
-                roundId,
-                name: player.profile.name,
-                amount: payload.amount,
-                baseAmount: payload.amount * rate,
-                rate,
-                time: new Date(),
-                exchangeRateId: gameData.exchangeRates.exId,
-                playerId: player.session.playerId,
-            };
-
             // Act
             await proceedBetQueue.handleSuccessBet(player, balance, roundId, { ...payload, action: Actions.Bet });
 
             // Assert
-            expect(recentBetPublisher.publish).toHaveBeenCalledWith(mockRecentBet);
+            expect(recentBetPublisher.publish).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    roundId,
+                    name: player.profile.name,
+                    amount: payload.amount,
+                    baseAmount: payload.amount * rate,
+                    rate,
+                    time: expect.any(Date),
+                    exchangeRateId: gameData.exchangeRates.exId,
+                    playerId: player.session.playerId,
+                })
+            );
         });
 
         it("should not call recentBetConsumer.add when action is not Bet", async () => {
@@ -864,7 +861,6 @@ describe("ProcessBetQueue", () => {
             roundsRepository,
             mineConsumer,
             recentBetConsumer,
-            recentBetPublisher,
         });
     };
 

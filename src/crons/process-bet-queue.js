@@ -4,7 +4,6 @@ import { Core } from "sc-game-base";
 import { tracer } from "sc-instrument";
 import { Actions } from "../constants";
 import { MineConsumer, ProvablyFairConsumer, RecentBetConsumer, SettleCashOutConsumer } from "../consumers";
-import { RecentBetPublisher } from "../event-publishers";
 export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
     /**
      * @param {Object} dependencies
@@ -13,7 +12,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
      * @param {mongoose.Model} dependencies.roundsRepository
      * @param {MineConsumer} dependencies.mineConsumer
      * @param {RecentBetConsumer} dependencies.recentBetConsumer
-     * @param {RecentBetPublisher} dependencies.recentBetPublisher
      * */
     constructor({
         definition,
@@ -31,7 +29,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         roundsRepository,
         mineConsumer,
         recentBetConsumer,
-        recentBetPublisher,
     }) {
         super({
             definition,
@@ -51,7 +48,6 @@ export default class ProcessBetQueue extends Core.Crons.ProcessBetQueue {
         this.roundsRepository = roundsRepository;
         this.mineConsumer = mineConsumer;
         this.recentBetConsumer = recentBetConsumer;
-        this.recentBetPublisher = recentBetPublisher;
     }
 
     dequeueBets() {
