@@ -1089,6 +1089,87 @@ describe("GameBots", () => {
                 expect(range1.occupiedSlots).toBe(2);
                 expect(range1.availableSlots).toBe(0);
             });
+
+            it("should include multiplierMode in cache key", () => {
+                // Arrange
+                const bot = initBot();
+                bot.botsInRoom = { bot1: {}, bot2: {} }; // 2 bots
+
+                // Act
+                const cacheKey1 = bot.generateCacheKey(2, 1);
+                const cacheKey2 = bot.generateCacheKey(2, 2);
+
+                // Assert
+                expect(cacheKey1).toContain("1");
+                expect(cacheKey2).toContain("2");
+                expect(cacheKey1).not.toBe(cacheKey2);
+            });
+
+            it("should cache results separately for different multiplierMode values", () => {
+                // Arrange
+                const bot = initBot();
+                bot.botsInRoom = { bot1: {}, bot2: {} }; // 2 bots
+                bot.getMaxMultiplier = jest.fn()
+                    .mockReturnValueOnce(10.0) // For mode 1
+                    .mockReturnValueOnce(20.0); // For mode 2
+
+                // Act
+                const result1 = bot.getTargetRangeSlots(1);
+                const result2 = bot.getTargetRangeSlots(2);
+
+                // Assert
+                const range5_1 = result1.find((r) => r.id === 5);
+                const range5_2 = result2.find((r) => r.id === 5);
+                expect(range5_1.max).toBe(10.0);
+                expect(range5_2.max).toBe(20.0);
+                expect(bot.getMaxMultiplier).toHaveBeenCalledTimes(2);
+                expect(bot.getMaxMultiplier).toHaveBeenCalledWith(1);
+                expect(bot.getMaxMultiplier).toHaveBeenCalledWith(2);
+            });
+
+            it("should reuse cached result for the same multiplierMode", () => {
+                // Arrange
+                const bot = initBot();
+                bot.botsInRoom = { bot1: {}, bot2: {} }; // 2 bots
+                bot.getMaxMultiplier = jest.fn().mockReturnValue(10.0);
+
+                // Act
+                const result1 = bot.getTargetRangeSlots(1);
+                const result2 = bot.getTargetRangeSlots(1);
+
+                // Assert
+                expect(bot.getMaxMultiplier).toHaveBeenCalledTimes(1);
+                expect(result1).toBe(result2); // Should return the same cached object
+            });
+
+            it("should use different cache entries for different multiplierMode values with same bot count", () => {
+                // Arrange
+                const bot = initBot();
+                bot.botsInRoom = { bot1: {}, bot2: {} }; // 2 bots
+                bot.getMaxMultiplier = jest.fn()
+                    .mockReturnValueOnce(10.0) // For mode 1
+                    .mockReturnValueOnce(20.0) // For mode 2
+                    .mockReturnValueOnce(10.0); // For mode 1 again (cache was overwritten, so recalculates)
+
+                // Act
+                const result1 = bot.getTargetRangeSlots(1);
+                const result2 = bot.getTargetRangeSlots(2);
+                const result3 = bot.getTargetRangeSlots(1); // Cache was overwritten by mode 2, so recalculates
+
+                // Assert
+                // Since cache is single-valued, mode 2 overwrites mode 1's cache
+                // So when we call mode 1 again, it recalculates (3 calls total)
+                expect(bot.getMaxMultiplier).toHaveBeenCalledTimes(3);
+                expect(result1).not.toBe(result3); // Different objects (cache was overwritten)
+                expect(result2).not.toBe(result1); // Different cache entry
+                // Verify that different modes produce different results
+                const range5_1 = result1.find((r) => r.id === 5);
+                const range5_2 = result2.find((r) => r.id === 5);
+                const range5_3 = result3.find((r) => r.id === 5);
+                expect(range5_1.max).toBe(10.0);
+                expect(range5_2.max).toBe(20.0);
+                expect(range5_3.max).toBe(10.0); // Recalculated with mode 1
+            });
         });
 
         describe("reserveSlot method", () => {

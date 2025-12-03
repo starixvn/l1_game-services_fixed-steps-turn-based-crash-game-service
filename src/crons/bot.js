@@ -309,7 +309,7 @@ export default class Bot extends Table.Crons.TableGameBot {
      */
     getTargetRangeSlots(multiplierMode) {
         const totalBots = Object.keys(this.botsInRoom).length;
-        const cacheKey = this.generateCacheKey(totalBots);
+        const cacheKey = this.generateCacheKey(totalBots, multiplierMode);
 
         // Return cached result if valid
         if (this.targetRangeSlotsCache && this.targetRangeSlotsCacheKey === cacheKey) {
@@ -349,14 +349,15 @@ export default class Bot extends Table.Crons.TableGameBot {
     /**
      * Generate cache key for slot calculations
      * @param {number} totalBots - Total number of bots in room
+     * @param {number} multiplierMode - The multiplier mode for calculating range5 max
      * @returns {string} Cache key
      */
-    generateCacheKey(totalBots) {
+    generateCacheKey(totalBots, multiplierMode) {
         // Include occupied slots in cache key to detect changes
         const occupiedCounts = TARGET_RANGES.map(range =>
             this.targetRangeSlots.get(range.id).size
         ).join(',');
-        return `${totalBots}:${occupiedCounts}`;
+        return `${totalBots}:${multiplierMode}:${occupiedCounts}`;
     }
 
     /**
